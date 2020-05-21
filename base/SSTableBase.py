@@ -35,7 +35,8 @@ class FileTable(ABC):
                                       "implement class attribute "
                                       "schema")
 
-    def __init__(self, input_filename, output_filename, mode):
+    def __init__(self, input_filename, output_filename,
+                 mode=FileTableMode.CREATE):
         self.input_filename = input_filename
         self.output_filename = output_filename
         self.mode = mode
@@ -46,7 +47,7 @@ class FileTable(ABC):
         if self.mode is FileTableMode.OPEN:
             pass
 
-    def _make_rows(self, input_file,
+    def _make_rows(self, input_rows,
                    columns: Optional[Iterable[ColumnName]] = None) ->\
             Generator[TableSchema, None, None]:
         if columns is None:
@@ -54,8 +55,7 @@ class FileTable(ABC):
         else:
             registry = self.schema.registry_subset(columns)
         # make the generator objects for each column
-        for row in iter(input_file.readline, b""):
-            row = row.decode()
+        for row in input_rows:
             row = self._intrepret_row(row)
             yield self.schema(*(func(row) for func in registry.values()))
 
@@ -70,7 +70,9 @@ class FileTable(ABC):
                 open(self.output_filename, "w+b") as out_file:
             with mmap(in_file.fileno(), 0) as mm_in,\
                  mmap(out_file.fileno(), 0) as mm_out:
-                rows = self._make_rows(mm_in, columns)
+                rows_generator = (row.decode() for row in iter(mm_in.readline,
+                                  b""))
+                rows = self._make_rows(rows_generator, columns)
                 for row in rows:
                     line = f"{','.join(f'{x}' for x in row)}\n"
                     line_bytes = line.encode()

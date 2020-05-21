@@ -4,10 +4,10 @@ __all__ = ("MPCORBDESIGMAP")
 
 from dataclasses import dataclass
 
-from ..base import TableSchema
+from ..base import TableSchema, schemaclass
 
 
-@dataclass
+@schemaclass
 class MPCORBDESIGMAP(TableSchema):
     mpcDesignation: str
     mpcNumber: int

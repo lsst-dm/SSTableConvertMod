@@ -2,13 +2,12 @@ from __future__ import annotations
 
 __all__ = ("DIASource")
 
-from dataclasses import dataclass
 from datetime import datetime
 
-from ..base import TableSchema
+from ..base import TableSchema, schemaclass
 
 
-@dataclass
+@schemaclass
 class DIASource(TableSchema):
     diaSourceId: int
     ccdVisitId: int

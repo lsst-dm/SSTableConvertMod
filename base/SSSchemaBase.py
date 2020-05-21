@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-__all__ = ("TableSchema", "NullValue")
+__all__ = ("TableSchema", "NullValue", "schemaclass")
 
 from abc import ABC
 from dataclasses import dataclass, fields
@@ -32,9 +32,10 @@ class TableSchema(ABC):
     registry: ClassVar[MutableMapping[ColumnName, Callable]]
 
     def __init_subclass__(cls):
+        super().__init_subclass__()
         cls.registry = defaultdict(null_column_inserter)
-        cls._fields = {field.name: field.type for field in fields(cls)}
-        return super().__init_subclass__()
+        #import pdb; pdb.set_trace()
+        #cls._fields = {field.name: field.type for field in fields(cls)}
 
     @classmethod
     def register(cls, column_name: ColumnName) ->\
@@ -56,3 +57,10 @@ class TableSchema(ABC):
     def __iter__(self):
         for field in self._fields:
             yield getattr(self, field)
+
+
+def schemaclass(klass):
+    new_klass = dataclass(klass)
+    new_klass._fields = {field.name: field.type for field in fields(klass)
+                         if field not in fields(TableSchema)}
+    return new_klass
