@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-__all__ = ("MPCORBDESIGMAP")
+__all__ = ("DIASource")
 
 from dataclasses import dataclass
 from datetime import datetime
 
-from .SSSchemaBase import TableSchema
+from ..base import TableSchema
 
 
 @dataclass

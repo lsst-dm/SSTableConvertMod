@@ -4,7 +4,8 @@ __all__ = ("MPCORBDESIGMAP")
 
 from dataclasses import dataclass
 
-from .SSSchemaBase import TableSchema
+from ..base import TableSchema
+
 
 @dataclass
 class MPCORBDESIGMAP(TableSchema):

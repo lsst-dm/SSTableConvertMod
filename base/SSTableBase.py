@@ -1,14 +1,14 @@
 from __future__ import annotations
 from abc import ABC, abstractclassmethod
 from dataclasses import dataclass, field
-from typing import Iterable, Generator, ClassVar, Optional, Dict, Any
+from typing import Iterable, Generator, ClassVar, Optional, Dict, Any, Type
 from enum import Enum, auto
 from mmap import mmap
 import yaml
 
 from .SSSchemaBase import TableSchema, NullValue
 
-from .customTypes import ColumnName
+from ..customTypes import ColumnName  # type: ignore
 
 
 class FileTableMode(Enum):
@@ -18,8 +18,8 @@ class FileTableMode(Enum):
 
 @dataclass
 class FileTable(ABC):
-    schema: ClassVar[TableSchema]
-    index_columns: ClassVar[Iterable[str]]
+    schema: ClassVar[Type[TableSchema]]
+    index_columns: ClassVar[Iterable[ColumnName]]
     input_filename: str
     output_filename: str
     mode: FileTableMode
@@ -57,7 +57,7 @@ class FileTable(ABC):
         for row in iter(input_file.readline, b""):
             row = row.decode()
             row = self._intrepret_row(row)
-            yield self.schema(func(row) for func in registry.values())
+            yield self.schema(*(func(row) for func in registry.values()))
 
     @abstractclassmethod
     def _intrepret_row(self, row: str) -> Iterable:

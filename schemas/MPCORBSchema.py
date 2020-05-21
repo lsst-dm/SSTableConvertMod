@@ -6,13 +6,14 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Iterable
 
-from .SSSchemaBase import TableSchema
+from ..base import TableSchema
 
 
 @dataclass
 class MPCORB(TableSchema):
-    """The orbit catalog produced by the Minor Planet Center. Ingested daily. O(10M) rows by survey end.
-    The columns are described at https://minorplanetcenter.net//iau/info/MPOrbitFormat.html
+    """The orbit catalog produced by the Minor Planet Center. Ingested daily.
+    O(10M) rows by survey end. The columns are described at
+    https://minorplanetcenter.net//iau/info/MPOrbitFormat.html
     """
     mpcDesignation: str
     mpcNumber: int

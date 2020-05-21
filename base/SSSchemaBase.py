@@ -4,10 +4,10 @@ __all__ = ("TableSchema", "NullValue")
 
 from abc import ABC
 from dataclasses import dataclass, fields
-from typing import Callable, Sequence, Dict
+from typing import Callable, Iterable, Dict, MutableMapping, ClassVar
 from collections import defaultdict
 
-from .customTypes import ColumnName
+from ..customTypes import ColumnName  # type: ignore
 
 
 class NullMeta(type):
@@ -19,7 +19,7 @@ class NullValue(metaclass=NullMeta):
     pass
 
 
-def null_column(row: Sequence):
+def null_column(row: Iterable):
     return NullValue
 
 
@@ -29,6 +29,8 @@ def null_column_inserter():
 
 @dataclass
 class TableSchema(ABC):
+    registry: ClassVar[MutableMapping[ColumnName, Callable]]
+
     def __init_subclass__(cls):
         cls.registry = defaultdict(null_column_inserter)
         cls._fields = {field.name: field.type for field in fields(cls)}
@@ -37,7 +39,7 @@ class TableSchema(ABC):
     @classmethod
     def register(cls, column_name: ColumnName) ->\
             Callable[[Callable], Callable]:
-        if column_name not in cls._fields:
+        if column_name not in cls._fields:  # type: ignore
             raise AttributeError(f"No column named {column_name} in {cls}")
 
         def inner(function: Callable) -> Callable:
@@ -46,8 +48,8 @@ class TableSchema(ABC):
         return inner
 
     @classmethod
-    def registry_subset(cls, columns: Sequence[ColumnName]) -> Dict:
-        subset = defaultdict(null_column_inserter)
+    def registry_subset(cls, columns: Iterable[ColumnName]) -> Dict:
+        subset: Dict[ColumnName, Callable] = defaultdict(null_column_inserter)
         subset.update({column: cls.registry[column] for column in columns})
         return subset
 
