@@ -4,10 +4,9 @@ __all__ = ("DIASource")
 
 from datetime import datetime
 
-from ..base import TableSchema, schemaclass
+from ..base import TableSchema
 
 
-@schemaclass
 class DIASource(TableSchema):
     diaSourceId: int
     ccdVisitId: int

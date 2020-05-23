@@ -2,12 +2,9 @@ from __future__ import annotations
 
 __all__ = ("MPCORBDESIGMAP")
 
-from dataclasses import dataclass
-
-from ..base import TableSchema, schemaclass
+from ..base import TableSchema
 
 
-@schemaclass
 class MPCORBDESIGMAP(TableSchema):
     mpcDesignation: str
     mpcNumber: int

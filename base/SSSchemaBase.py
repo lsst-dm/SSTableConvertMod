@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-__all__ = ("TableSchema", "NullValue", "schemaclass")
+__all__ = ("TableSchema", "NullValue",)
 
 from abc import ABC
 from dataclasses import dataclass, fields
@@ -14,13 +14,16 @@ class NullMeta(type):
     def __str__(self):
         return "null"
 
+    def __bytes__(self):
+        return b"null"
+
 
 class NullValue(metaclass=NullMeta):
     pass
 
 
 def null_column(row: Iterable):
-    return NullValue
+    return b"null"
 
 
 def null_column_inserter():
@@ -34,8 +37,12 @@ class TableSchema(ABC):
     def __init_subclass__(cls):
         super().__init_subclass__()
         cls.registry = defaultdict(null_column_inserter)
-        #import pdb; pdb.set_trace()
-        #cls._fields = {field.name: field.type for field in fields(cls)}
+        cls = dataclass(cls)
+        cls._fields = {field.name: field.type for field in fields(cls)
+                       if field not in fields(TableSchema)}
+        cls._field_pos = {pos: field for pos, field in enumerate(cls._fields)}
+        cls._str = "{},"*len(cls._fields)
+        cls._str = cls._str[:-1] + '\n'
 
     @classmethod
     def register(cls, column_name: ColumnName) ->\
@@ -55,12 +62,7 @@ class TableSchema(ABC):
         return subset
 
     def __iter__(self):
-        for field in self._fields:
-            yield getattr(self, field)
+        return (getattr(self, field) for field in self._fields)
 
-
-def schemaclass(klass):
-    new_klass = dataclass(klass)
-    new_klass._fields = {field.name: field.type for field in fields(klass)
-                         if field not in fields(TableSchema)}
-    return new_klass
+    def __str__(self):
+        return self._str.format(*(x for x in self))
