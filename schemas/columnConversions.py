@@ -18,17 +18,17 @@ DIASOURCE_SSID_CACHE: MutableMapping = {}
 
 
 @DIASource.register(ColumnName("ssObjectId"))
-def convert_objId_dia(row: Mapping) -> bytes:
+def convert_objId_dia(row: Mapping) -> str:
     value = row['ObjID']
     return DIASOURCE_SSID_CACHE.setdefault(value, convert_objId_base(value))
 
 
 @MPCORB.register(ColumnName("ssObjectId"))
-def convert_objId_mcorb(row: Mapping) -> bytes:
+def convert_objId_mcorb(row: Mapping) -> str:
     return convert_objId_base(row["S3MID"])
 
 
-def convert_objId_base(value) -> bytes:
+def convert_objId_base(value) -> str:
     """Convert a S3M object id into an integer to use for
     solarsystem object id in tables.
 
@@ -42,29 +42,29 @@ def convert_objId_base(value) -> bytes:
     mod operation, but this seems unlikely in practice so it is
     not something to worry about as this is temporary anyway
     """
-    return f"{int(sha1(value).hexdigest(), 16) % maxsize}".encode()
+    return f"{int(sha1(value.encode()).hexdigest(), 16) % maxsize}"
 
 
 @DIASource.register(ColumnName("diaSourceId"))
-def build_diaSourceId(row: Mapping) -> bytes:
+def build_diaSourceId(row: Mapping) -> str:
     """This function simply returns the next number in a sequence
     each time that it is called
     """
-    return f"{next(DIA_SOURCE_ID_COUNTER)}".encode()
+    return f"{next(DIA_SOURCE_ID_COUNTER)}"
 
 
 @DIASource.register(ColumnName("ra"))
-def return_ra(row: Mapping) -> bytes:
+def return_ra(row: Mapping) -> str:
     return row["AstRA(deg)"]
 
 
 @DIASource.register(ColumnName("decl"))
-def return_decl(row: Mapping) -> bytes:
+def return_decl(row: Mapping) -> str:
     return row["AstDec(deg)"]
 
 
 @DIASource.register(ColumnName("totFlux"))
-def build_totFlux(row: Mapping) -> bytes:
+def build_totFlux(row: Mapping) -> str:
     """Converts from V in input file to nmgy
 
     This should be looked at again, as I dont fully know the meaning
@@ -72,25 +72,24 @@ def build_totFlux(row: Mapping) -> bytes:
     the table should be in flux in that filter, but without colors I
     cant do that conversion.
     """
-    value = f'{10**((22.5 - float(row["V"]))/2.5)}'.encode()
-    return value
+    return f'{10**((22.5 - float(row["V"]))/2.5)}'
 
 
 @MPCORB.register(ColumnName("mpcDesignation"))
-def return_mpcDesignation(row: Mapping) -> bytes:
+def return_mpcDesignation(row: Mapping) -> str:
     return row["S3MID"]
 
 
 @MPCORB.register(ColumnName("e"))
-def return_e(row: Mapping) -> bytes:
+def return_e(row: Mapping) -> str:
     return row["e"]
 
 
 @MPCORB.register(ColumnName("incl"))
-def return_i(row: Mapping) -> bytes:
+def return_i(row: Mapping) -> str:
     return row["i"]
 
 
 @MPCORB.register(ColumnName("mpcH"))
-def return_h(row: Mapping) -> bytes:
+def return_h(row: Mapping) -> str:
     return row["H"]

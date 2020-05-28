@@ -11,19 +11,25 @@ from ..customTypes import ColumnName  # type: ignore
 
 
 class NullMeta(type):
+    """This metaclass controls the represenstation of the singleton
+    "NullValue" class.
+    """
     def __str__(self):
+        """Returns the string null when str is called with NullValue
+        as an argument.
+        """
         return "null"
-
-    def __bytes__(self):
-        return b"null"
 
 
 class NullValue(metaclass=NullMeta):
+    """This is a singleton class to represent when a column is null.
+    This saves memory and makes is comparisons possible.
+    """
     pass
 
 
 def null_column(row: Iterable):
-    return b"null"
+    return NullValue
 
 
 def null_column_inserter():
@@ -36,13 +42,13 @@ class TableSchema(ABC):
 
     def __init_subclass__(cls):
         super().__init_subclass__()
-        cls.registry = defaultdict(null_column_inserter)
+        #cls.registry = defaultdict(null_column_inserter)
+        cls.registry = {}
         cls = dataclass(cls)
         cls._fields = {field.name: field.type for field in fields(cls)
                        if field not in fields(TableSchema)}
         cls._field_pos = {pos: field for pos, field in enumerate(cls._fields)}
-        cls._str = "{},"*len(cls._fields)
-        cls._str = cls._str[:-1] + '\n'
+        cls._pos_field = {field: pos for pos, field in enumerate(cls._fields)}
 
     @classmethod
     def register(cls, column_name: ColumnName) ->\
@@ -61,8 +67,8 @@ class TableSchema(ABC):
         subset.update({column: cls.registry[column] for column in columns})
         return subset
 
-    def __iter__(self):
-        return (getattr(self, field) for field in self._fields)
+    def __iter__(self) -> Iterable[ColumnName]:
+        return (getattr(self, field) for field in self._fields)  # type: ignore
 
     def __str__(self):
         return self._str.format(*(x for x in self))

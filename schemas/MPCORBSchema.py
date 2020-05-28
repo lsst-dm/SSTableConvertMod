@@ -4,7 +4,6 @@ __all__ = ("MPCORB")
 
 from datetime import datetime
 from typing import Iterable
-import itertools
 
 from ..base import TableSchema
 
@@ -102,13 +101,3 @@ class MPCORB(TableSchema):
 
     covariance: Iterable[float]
     # MPCORB: Covariances, details TBD
-
-    def byte_stream(self):
-        #stream = []
-        #for field in self._fields:
-            #stream.append(f"{getattr(self, field)}".encode())
-            #stream.append(b",")
-        #stream.pop()
-        #stream.append(b'\n')
-        #return stream
-        return (f"{field},".encode() for field in self)
