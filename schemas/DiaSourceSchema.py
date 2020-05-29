@@ -9,8 +9,16 @@ from ..base import TableSchema
 
 class DIASource(TableSchema):
     diaSourceId: int
+    # Unique id.
+
     ccdVisitId: int
+    # Id of the ccdVisit where this diaSource was measured. Note that we are
+    # allowing a diaSource to belong to multiple amplifiers, but it may not
+    # span multiple ccds.
+
     diaObjectId: int
+    # 
+
     ssObjectId: int
     parentDiaSourceId: int
     prv_procOrder: int

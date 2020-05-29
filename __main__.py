@@ -1,3 +1,3 @@
 from .cli import cli
 
-cli()
+cli.main(prog_name="SSTableConvertMod")
