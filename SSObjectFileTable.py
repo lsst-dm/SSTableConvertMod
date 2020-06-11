@@ -1,0 +1,48 @@
+from __future__ import annotations
+
+__all__ = ("SSObjectFileTable",)
+
+from typing import (Optional, Iterable, Dict, cast)
+import warnings
+
+from .base import (FileTable, FileTableBuilder, NoIndexError)
+from .schemas import SSObject
+from .customTypes import ColumnName
+from . import MPCORBFileTable
+
+
+class SSObjectBuilder(FileTableBuilder):
+    input_schema = ("ObjID", "observationId", "FieldMJD", "AstRange(km)",
+                    "AstRangeRate(km/s)", "AstRA(deg)", "AstRARate(deg/day)",
+                    "AstDec(deg)", "AstDecRate(deg/day)",
+                    "Ast-Sun(J2000x)(km)", "Ast-Sun(J2000y)(km)",
+                    "Ast-Sun(J2000z)(km)", "Sun-Ast-Obs(deg)",
+                    "V", "FiltermagV(H=0)", "Filter")
+
+    def __init__(self, parent: FileTable, input_filename: str,
+                 output_filename: str, input_mpc_filename: str,
+                 skip_rows: int,
+                 stop_after: Optional[int] = None,
+                 columns: Optional[Iterable[ColumnName]] = None,
+                 do_index: Optional[bool] = False):
+        super().__init__(parent, input_filename, output_filename, skip_rows,
+                         stop_after, columns, do_index)
+        self.mpc_file = MPCORBFileTable(filename=input_mpc_filename)
+
+    def _intrepret_row(self, row: str) -> Dict:
+        parsed = super()._intrepret_row(row)
+        identifier = ('ssObjectId', parsed['ssObjectId'])
+        extra = self.mpc_file.get_with_index(identifier)  # type: ignore
+        if extra.__class__ is NoIndexError:
+            warnings.warn(f"Cannot file s3m object with ssObjectId "
+                          "{parsed['ssObjectId']}")
+            extra = cast(NoIndexError, extra).row
+
+        parsed.update(cast(Dict, extra))
+        return parsed
+
+
+class SSObjectFileTable(FileTable):
+    schema = SSObject
+    index_columns = (ColumnName(x) for x in ("diaSourceId", "ssObjectId"))
+    builder = SSObjectBuilder

@@ -4,9 +4,9 @@ __all__ = ("TableSchema",)
 
 from abc import ABC
 from dataclasses import dataclass, fields
-from typing import Callable, Iterable, Dict, MutableMapping, ClassVar
+from typing import Callable, Iterable, Dict, MutableMapping, ClassVar, Mapping
 
-from ..customTypes import ColumnName  # type: ignore
+from ..customTypes import ColumnName
 
 
 @dataclass
@@ -32,23 +32,27 @@ class TableSchema(ABC):
     sublcass is to be used, otherwise the registration process will not happen.
     The easiest way to ensure this will happen is to put new handler functions
     inside SSTableConvertMod.schemas.columnConversion, or in a file that will
-    be imported inside SSTableConvertMod.schemas.__init__. 
+    be imported inside SSTableConvertMod.schemas.__init__.
     """
     registry: ClassVar[MutableMapping[ColumnName, Callable]]
+    fields: ClassVar[Mapping[ColumnName, type]]
+    pos_field: ClassVar[Mapping[int, ColumnName]]
+    field_pos: ClassVar[Mapping[ColumnName, int]]
 
     def __init_subclass__(cls):
         super().__init_subclass__()
         cls.registry = {}
         cls = dataclass(cls)
-        cls._fields = {field.name: field.type for field in fields(cls)
-                       if field not in fields(TableSchema)}
-        cls._field_pos = {pos: field for pos, field in enumerate(cls._fields)}
-        cls._pos_field = {field: pos for pos, field in enumerate(cls._fields)}
+        cls.fields = {ColumnName(field.name): field.type
+                      for field in fields(cls)
+                      if field not in fields(TableSchema)}
+        cls.pos_field = {pos: field for pos, field in enumerate(cls.fields)}
+        cls.field_pos = {field: pos for pos, field in enumerate(cls.fields)}
 
     @classmethod
     def register(cls, column_name: ColumnName) ->\
             Callable[[Callable], Callable]:
-        if column_name not in cls._fields:  # type: ignore
+        if column_name not in cls.fields:
             raise AttributeError(f"No column named {column_name} in {cls}")
 
         def inner(function: Callable) -> Callable:
@@ -63,7 +67,7 @@ class TableSchema(ABC):
         return subset
 
     def __iter__(self) -> Iterable[ColumnName]:
-        return (getattr(self, field) for field in self._fields)  # type: ignore
+        return (getattr(self, field) for field in self.fields)
 
     def __str__(self):
         return self._str.format(*(x for x in self))

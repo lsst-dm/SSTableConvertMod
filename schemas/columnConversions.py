@@ -4,15 +4,12 @@ __all__ = ()
 
 from sys import maxsize
 from hashlib import sha1
-from itertools import count
 from typing import MutableMapping, Mapping
 
 from .DiaSourceSchema import DIASource
 from .MPCORBSchema import MPCORB
 
 from ..customTypes import ColumnName
-
-DIA_SOURCE_ID_COUNTER = count()
 
 DIASOURCE_SSID_CACHE: MutableMapping = {}
 
@@ -50,7 +47,8 @@ def build_diaSourceId(row: Mapping) -> str:
     """This function simply returns the next number in a sequence
     each time that it is called
     """
-    return f"{next(DIA_SOURCE_ID_COUNTER)}"
+    sub_string = f"{row['ObjID']}{row['AstRA(deg)']}{row['AstDec(deg)']}"
+    return f"{int(sha1(sub_string.encode()).hexdigest(), 16) % maxsize}"
 
 
 @DIASource.register(ColumnName("ra"))

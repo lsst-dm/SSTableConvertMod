@@ -17,24 +17,64 @@ class DIASource(TableSchema):
     # span multiple ccds.
 
     diaObjectId: int
-    # 
+    # Id of the diaObject this source was associated with, if any. If not, it
+    # is set to NULL (each diaSource will be associated with either a diaObject
+    # or ssObject).
 
     ssObjectId: int
+    # Id of the ssObject this source was associated with, if any. If not, it is
+    # set to NULL (each diaSource will be associated with either a diaObject or
+    # ssObject).
+
     parentDiaSourceId: int
+    # Id of the parent diaSource this diaSource has been deblended from, if
+    # any.
+
     prv_procOrder: int
+    # Position of this diaSource in the processing order relative to other
+    # diaSources within a given diaObjectId or ssObjectId.
+
     ssObjectReassocTime: datetime
+    # Time when this diaSource was reassociated from diaObject to ssObject (if
+    # such reassociation happens, otherwise NULL).
+
     midPointTai: float
+    # Effective mid-exposure time for this diaSource.
+
     ra: float
+    # RA-coordinate of the center of this diaSource.
+
     raSigma: float
+    # Uncertainty of ra.
+
     decl: float
+    # Decl-coordinate of the center of this diaSource.
+
     declSigma: float
+    # Uncertainty of decl.
+
     ra_decl_Cov: float
+    # Covariance between ra and decl.
+
     x: float
+    # x position computed by a centroiding algorithm.
+
     xSigma: float
+    # Uncertainty of x.
+
     y: float
+    # y position computed by a centroiding algorithm.
+
     ySigma: float
+    # Uncertainty of y.
+
     x_y_Cov: float
+    # Covariance between x and y.
+
     apFlux: float
+    # Calibrated aperture flux. Note that this actually measures the difference
+    # between the template and the visit image.
+
     apFluxErr: float
     snr: float
     psFlux: float
