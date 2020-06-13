@@ -1,11 +1,13 @@
 from __future__ import annotations
 
-__all__ = ("FileTable", "IndexDict", "FileTableBuilder", "NoIndexError")
+__all__ = ("FileTable", "IndexDict", "FileTableBuilder", "NoIndexError",
+           "FileTableInMem")
 
-from abc import ABC 
+from abc import ABC
 from dataclasses import dataclass, InitVar
 from itertools import islice
 from mmap import mmap
+import pandas as pd
 import os
 from typing import (Iterable, Generator, ClassVar, Optional, Type,
                     Mapping, Tuple, Union, Any, Dict)
@@ -221,20 +223,21 @@ class FileTable(ABC):
         Additionally this automatically converts a subclass into a dataclass,
         to save on keeping track of an extra class decorator.
         """
-        if not hasattr(cls, "schema"):
-            raise NotImplementedError("Subclasses of FileTable must"
-                                      "implement class attribute "
-                                      "schema")
-        if not hasattr(cls, "index_columns"):
-            raise NotImplementedError("Subclasses of FileTable must"
-                                      "implement class attribute "
-                                      "index_columns")
-        if not hasattr(cls, "builder"):
-            raise NotImplementedError("Subclasses of FileTable must"
-                                      "implement class attribute "
-                                      "builder")
+        if cls.__name__ != "FileTableInMem":
+            if not hasattr(cls, "schema"):
+                raise NotImplementedError("Subclasses of FileTable must"
+                                          "implement class attribute "
+                                          "schema")
+            if not hasattr(cls, "index_columns"):
+                raise NotImplementedError("Subclasses of FileTable must"
+                                          "implement class attribute "
+                                          "index_columns")
+            if not hasattr(cls, "builder"):
+                raise NotImplementedError("Subclasses of FileTable must"
+                                          "implement class attribute "
+                                          "builder")
+            cls.builder = BuilderDescriptor(cls.builder)
         cls = dataclass(cls, init=False)
-        cls.builder = BuilderDescriptor(cls.builder)
 
     def __post_init__(self, do_index):
         """Fires after the automatically generated __init__ method so that
@@ -290,14 +293,13 @@ class FileTable(ABC):
             if item == '\\N' or item == '\\N\r\n':
                 value = '\\N'
             else:
-                value = eval(columnType)(item)
+                value = eval(columnType)(item)  # type: ignore
             d[ColumnName(name)] = value
         return d
 
     def _seek(self, value):
         if self._mmap is not None:
             self._mmap.seek(value)
-
 
     def __iter__(self):
         self._seek(0)
@@ -318,3 +320,27 @@ class FileTable(ABC):
             self._mmap.close()
         if self._file_handle is not None:
             self._file_handle.close()
+
+
+class FileTableInMem(FileTable):
+    def _open(self, _):
+        if self.filename is not None:
+            self.df: pd.DataFrame = pd.read_csv(self.filename)
+
+    def get_with_index(self, identifier: Tuple[ColumnName, Any]) ->\
+            Union[Mapping[ColumnName, Any], NoIndexError]:
+        result = self.df.query(f"identifier[0] == identifier[1]").to_dict('r')
+        if result:
+            return result[0]
+        else:
+            return NoIndexError({column: '\\N'
+                                 for column in self.schema.fields.items()})
+
+    def _load_line(self, line: Iterable[str]) -> Mapping[ColumnName, Any]:
+        pass
+
+    def _seek(self, _):
+        pass
+
+    def __iter__(self):
+        return self.df.iterrows()

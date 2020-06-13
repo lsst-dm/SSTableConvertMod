@@ -3,17 +3,21 @@ from __future__ import annotations
 __all__ = ()
 
 from sys import maxsize
+import astropy.coordinates as apc
 from hashlib import sha1
 from typing import MutableMapping, Mapping
+from functools import lru_cache
 
 from .DiaSourceSchema import DIASource
 from .MPCORBSchema import MPCORB
+from .SSSourceSchema import SSSource
 
 from ..customTypes import ColumnName
 
 DIASOURCE_SSID_CACHE: MutableMapping = {}
 
 
+@SSSource.register(ColumnName("ssObjectId"))
 @DIASource.register(ColumnName("ssObjectId"))
 def convert_objId_dia(row: Mapping) -> str:
     value = row['ObjID']
@@ -42,6 +46,7 @@ def convert_objId_base(value) -> str:
     return f"{int(sha1(value.encode()).hexdigest(), 16) % maxsize}"
 
 
+@SSSource.register(ColumnName("diaSourceId"))
 @DIASource.register(ColumnName("diaSourceId"))
 def build_diaSourceId(row: Mapping) -> str:
     """This function simply returns the next number in a sequence
@@ -91,3 +96,18 @@ def return_i(row: Mapping) -> str:
 @MPCORB.register(ColumnName("mpcH"))
 def return_h(row: Mapping) -> str:
     return row["H"]
+
+
+@SSSource.register(ColumnName("eclipticLambda"))
+def make_ecliptic_lamba():
+    return build_ecliptic_coord(row['ra'])
+
+
+@lru_cache(maxsize=1000)
+def build_ecliptic_coord(ra: float, dec: float) -> apc.SkyCoord:
+    coord = build_astropy_coord(ra, dec)
+    return coord.transform_to(apc.GeocentricMeanEcliptic)
+
+@lru_cache(maxsize=1000)
+def build_astropy_coord(ra: float, dec: float) -> apc.SkyCoord:
+    return apc.SkyCoord(ra=ra, dec=dec, frame=apc.ICRS, unit='deg')

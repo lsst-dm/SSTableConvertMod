@@ -16,5 +16,5 @@ class DiaSourceBuilder(FileTableBuilder):
 
 class DiaSourceFileTable(FileTable):
     schema = DIASource
-    index_columns = (ColumnName(x) for x in ("diaSourceId", "ssObjectId"))
+    index_columns = (ColumnName(x) for x in ("ssObjectId", ))
     builder = DiaSourceBuilder

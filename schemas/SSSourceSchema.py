@@ -21,6 +21,8 @@ class SSSource(TableSchema):
     topocentricDist: float
     predictedMagnitude: float
     predictedMagnitudeSigma: float
+    ra: float
+    decl: float
     residualRa: float
     residualDec: float
     predictedRaSigma: float

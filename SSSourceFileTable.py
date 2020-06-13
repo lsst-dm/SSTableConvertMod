@@ -2,74 +2,50 @@ from __future__ import annotations
 
 __all__ = ("SSSourceFileTable",)
 
-from typing import (Tuple, ClassVar, Optional, Iterable,
-                    Generator, Type, Dict)
-import csv
-from dataclasses import dataclass, InitVar
+from typing import (Optional, Iterable, Dict, cast)
+import warnings
 
-from .base import FileTable, IndexDict, TableSchema
+from .base import (FileTable, FileTableBuilder, NoIndexError)
 from .schemas import SSSource
 from .customTypes import ColumnName
-from . import MPCORBFileTable
+from . import MPCORBFT, SSObjectFT
 
 
-@dataclass
-class FileTableStub:
-    mpc_file_table: InitVar[MPCORBFileTable]
+class SSSourceBuilder(FileTableBuilder):
+    input_schema = ("ObjID", "observationId", "FieldMJD", "AstRange(km)",
+                    "AstRangeRate(km/s)", "AstRA(deg)", "AstRARate(deg/day)",
+                    "AstDec(deg)", "AstDecRate(deg/day)",
+                    "Ast-Sun(J2000x)(km)", "Ast-Sun(J2000y)(km)",
+                    "Ast-Sun(J2000z)(km)", "Sun-Ast-Obs(deg)",
+                    "V", "FiltermagV(H=0)", "Filter")
 
-    _file_table: ClassVar[Type[FileTable]] = FileTable
+    def __init__(self, parent: FileTable, input_filename: str,
+                 output_filename: str, input_mpc_filename: str,
+                 input_ssObject_filename: str,
+                 skip_rows: int,
+                 stop_after: Optional[int] = None,
+                 columns: Optional[Iterable[ColumnName]] = None,
+                 do_index: Optional[bool] = False):
+        super().__init__(parent, input_filename, output_filename, skip_rows,
+                         stop_after, columns, do_index)
+        self.mpc_file = MPCORBFT(filename=input_mpc_filename)
+        self.ssobject_file =\
+            SSObjectFT(filename=input_ssObject_filename)
 
-    def _make_rows(self, input_rows: Iterable[bytes],
-                   columns: Optional[Iterable[ColumnName]] = None,
-                   skip_rows=0, stop_after=None) ->\
-            Generator[Generator[str, None, None], None, None]:
-        return self._file_table._make_rows(self,  # type: ignore
-                                           input_rows, columns,
-                                           skip_rows, stop_after)
+    def _intrepret_row(self, row: str) -> Dict:
+        parsed = super()._intrepret_row(row)
+        identifier = ('ssObjectId', parsed['ssObjectId'])
+        extra = self.mpc_file.get_with_index(identifier)  # type: ignore
+        if extra.__class__ is NoIndexError:
+            warnings.warn(f"Cannot file s3m object with ssObjectId "
+                          "{parsed['ssObjectId']}")
+            extra = cast(NoIndexError, extra).row
 
-    def _intrepret_row(self, row: Dict) -> Dict:
-        identifier = ('ssObjectId', row[''])
-        extra = self.dia_file_table.get_with_index(identifier)  # type: ignore
-        row.update(extra)
-        return row
+        parsed.update(cast(Dict, extra))
+        return parsed
 
 
-@dataclass
-class SSSourceFileTable:
-    schema: ClassVar[Type[TableSchema]] = SSSource
-    index_columns: ClassVar[Tuple[ColumnName]] = (ColumnName("ssObjectId"),)
-
-    def __post_init__(self):
-        self.index_pos = {self.schema.field_pos[column]: column for column in
-                          self.index_columns}
-
-    @classmethod
-    def make_file(cls, input_mpc: str, input_csv: str,
-                  output_filename: str,
-                  csv_skip_rows: int = 0,
-                  csv_stop_after: Optional[int] = None,
-                  columns: Optional[Iterable[ColumnName]] = None,
-                  do_index=False) -> None:
-        mpc_file_table = MPCORBFileTable(filename=input_mpc)
-        indexes = IndexDict()
-        stub = FileTableStub(mpc_file_table, dia_file_table)
-        fileTable = cls()
-
-        with open(output_filename, 'w+') as out_file,\
-                open(input_csv, 'rb') as input_file:
-            writer = csv.writer(out_file, quoting=csv.QUOTE_NONE)
-            writer.writerow(cls.schema.fields.keys())
-            with mmap(input_file.fileno(), 0) as mm_in:
-                rows_generator = 
-                rows = stub._make_rows(rows_generator, columns, mpc_skip_rows,
-                                    mpc_stop_after)
-                if do_index:
-                    writer.writerows((indexes.insert((fileTable.index_pos[i],
-                                                    b),
-                                                    out_file.tell())
-                                    if i in fileTable.index_pos else b
-                                    for i, b
-                                    in enumerate(row_gen)) for row_gen in
-                                    rows)
-                else:
-                    writer.writerows(rows)
+class SSSourceFileTable(FileTable):
+    schema = SSSource
+    index_columns = (ColumnName(x) for x in ("diaSourceId", "ssObjectId"))
+    builder = SSSourceBuilder
