@@ -210,7 +210,7 @@ SSObject conversion functions are a bit different. Instead of getting a dictonar
 - flags
 - htmId20
 
-The mpc_entry attribute will be a dictonary with corresponding to a row in an alreay processed `MPCORBFileTable` i.e.:
+The mpc_entry attribute will be a dictonary with corresponding to a row in an alreay processed `MPCORBFileTable`, unless a given ssObjectId could not be found (which should not be possible) and then a NoIndexError object will be returned to signal that. A dict with the right schema and values of '\\N' can be gotten from a NoIndexError via the row attribute:
 - mpcDesignation
 - mpcNumber
 - ssObjectId
