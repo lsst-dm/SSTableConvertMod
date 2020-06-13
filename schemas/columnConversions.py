@@ -100,7 +100,7 @@ def return_h(row: Mapping) -> str:
 
 @SSSource.register(ColumnName("eclipticLambda"))
 def make_ecliptic_lamba(row: Mapping):
-    return build_ecliptic_coord(row['ra'])
+    return f"{build_ecliptic_coord(row['ra'], row['dec']).lon}"
 
 
 @lru_cache(maxsize=1000)
