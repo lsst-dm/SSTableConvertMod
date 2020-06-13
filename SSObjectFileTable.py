@@ -19,6 +19,8 @@ class SSObjectRow:
     dia_list: List
     mpc_entry: Union[Dict, NoIndexError]
 
+
+class SSObjectTuple(tuple):
     def decode(self):
         return self
 
@@ -45,7 +47,7 @@ class SSObjectBuilder(FileTableBuilder):
         objects_set: Set = set()
         for dia in self.dia_files:
             objects_set.update(dia.indexes)  # type: ignore
-        return (obj for obj in objects_set)
+        return (SSObjectTuple(obj) for obj in objects_set)
 
     def _intrepret_row(self, object_id):
         rows = []

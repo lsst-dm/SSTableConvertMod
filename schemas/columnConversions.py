@@ -99,7 +99,7 @@ def return_h(row: Mapping) -> str:
 
 
 @SSSource.register(ColumnName("eclipticLambda"))
-def make_ecliptic_lamba():
+def make_ecliptic_lamba(row: Mapping):
     return build_ecliptic_coord(row['ra'])
 
 
@@ -107,6 +107,7 @@ def make_ecliptic_lamba():
 def build_ecliptic_coord(ra: float, dec: float) -> apc.SkyCoord:
     coord = build_astropy_coord(ra, dec)
     return coord.transform_to(apc.GeocentricMeanEcliptic)
+
 
 @lru_cache(maxsize=1000)
 def build_astropy_coord(ra: float, dec: float) -> apc.SkyCoord:

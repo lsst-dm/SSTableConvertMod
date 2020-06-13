@@ -87,6 +87,10 @@ class FileTableBuilder(ABC):
         self.columns = columns
         self.do_index = do_index
 
+        self.index_pos = {self.parent.schema.field_pos[column]: column
+                          for column in
+                          self.parent.index_columns}
+
     def __init_subclass__(cls):
         """This handles adding all the appropriate attributes and validates that
         a subclass has implemented the required fields.
@@ -156,7 +160,7 @@ class FileTableBuilder(ABC):
                                      rows)
                 else:
                     writer.writerows(rows)
-        if self.do_index and self.index_columns and indexes:
+        if self.do_index and self.parent.index_columns and indexes:
             with open(self.output_filename+".sidecar", "w+b") as sidecar:
                 pickle.dump(indexes, sidecar)
 
@@ -254,7 +258,6 @@ class FileTable(ABC):
     def _open(self, do_index: bool):
         if self.filename is not None:
             self._file_handle = open(self.filename, 'r+b')
-            print(self.filename)
             self._mmap = mmap(self._file_handle.fileno(), 0)
 
             sidecar_path = f"{self.filename}.sidecar"
@@ -272,11 +275,11 @@ class FileTable(ABC):
                 with open(sidecar_path, 'w+b') as f:
                     pickle.dump(self.indexes, f)
 
-    def get_with_index(self, identifer: Tuple[ColumnName, Any]) ->\
+    def get_with_index(self, identifier: Tuple[ColumnName, Any]) ->\
             Union[Mapping[ColumnName, Any], NoIndexError]:
         if self.indexes is None:
             raise AttributeError("Can only seek if an index is built")
-        location = self.indexes.get(identifer[0], identifer[1])
+        location = self.indexes.get(identifier, None)
         if location is None:
             return NoIndexError({column: '\\N'
                                  for column in self.schema.fields.items()})
@@ -329,7 +332,8 @@ class FileTableInMem(FileTable):
 
     def get_with_index(self, identifier: Tuple[ColumnName, Any]) ->\
             Union[Mapping[ColumnName, Any], NoIndexError]:
-        result = self.df.query(f"identifier[0] == identifier[1]").to_dict('r')
+        result =\
+            self.df.query(f"{identifier[0]} == {identifier[1]}").to_dict('r')
         if result:
             return result[0]
         else:
