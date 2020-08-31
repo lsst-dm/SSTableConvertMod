@@ -17,7 +17,7 @@ class SSSourceBuilder(FileTableBuilder):
                     "AstDec(deg)", "AstDecRate(deg/day)",
                     "Ast-Sun(J2000x)(km)", "Ast-Sun(J2000y)(km)",
                     "Ast-Sun(J2000z)(km)", "Sun-Ast-Obs(deg)",
-                    "V", "FiltermagV(H=0)", "Filter", "AstRASigma(mas)",
+                    "V", "Filtermag", "V(H=0)", "Filter", "AstRASigma(mas)",
                     "AstDecSigma(mas)", "PhotometricSigma(mag)")
 
     def __init__(self, parent: FileTable, input_filename: str,
