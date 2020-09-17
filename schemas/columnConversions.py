@@ -118,7 +118,7 @@ def make_galactic_b(row: Mapping):
 @SSSource.register(ColumnName('phaseAngle'))
 def phaseAngle(row: Mapping) -> str:
     return f'{float(row["Sun-Ast-Obs(deg)"])}'
-    
+
 #Do all calculations have to happen inside f strings?
 @SSSource.register(ColumnName('heliocentricDist'))
 def helioDist(row: Mapping) -> str:
@@ -137,10 +137,12 @@ def topoDist(row: Mapping) -> str:
     return f"{dau.value}"
 
 @SSSource.register(ColumnName('predictedMagnitude'))
-#add things
+def predMag(row: Mapping) -> str:
+    return f'{float(row["Filtermag"])}'
 
 @SSSource.register(ColumnName('predictedMagnitudeSigma'))
-#add things
+def predMagSig(row: Mapping) -> str:
+    return f'{float(row["PhotometricSigma(mag)"])}'
 
 @SSSource.register(ColumnName('residualRa'))
 def residualRa(row: Mapping) -> str:
