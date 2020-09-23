@@ -170,7 +170,7 @@ def predDecSigma(row: Mapping) -> str:
     dec = float(row['AstDecSigma(mas)'])*u.mas
     return f"{dec.to(u.deg).value}"
 
-@SSSource.register(ColumnName('predictedRaDecCov'))
+#@SSSource.register(ColumnName('predictedRaDecCov'))
 #add things
 
 @SSSource.register(ColumnName('heliocentricX'))
@@ -188,13 +188,13 @@ def helioZ(row: Mapping) -> str:
     ze = float(row['Ast-Sun(J2000z)(km)'])*u.km
     return f"{ze.to(u.au).value}"
 
-@SSSource.register(ColumnName('heliocentricVX'))
+#@SSSource.register(ColumnName('heliocentricVX'))
 #add things
 
-@SSSource.register(ColumnName('heliocentricVY'))
+#@SSSource.register(ColumnName('heliocentricVY'))
 #add things
 
-@SSSource.register(ColumnName('heliocentricVZ'))
+#@SSSource.register(ColumnName('heliocentricVZ'))
 #add things
 
 @SSSource.register(ColumnName('topocentricX'))
