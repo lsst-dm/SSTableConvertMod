@@ -65,12 +65,12 @@ def ssobject(input_dia_glob, input_mpc_filename, output_filename,
 @click.argument("input_mpc_filename")
 @click.argument("input_ssObject_filename")
 @click.argument("output_filename")
-def sssource(input_filename, input_mpc_filename, input_ssObject_filename,
+def sssource(input_filename, input_mpc_filename, input_ssobject_filename,
              output_filename, skip_rows, stop_after):
     SSSourceFT.builder(input_filename=input_filename,
                        output_filename=output_filename,
                        input_mpc_filename=input_mpc_filename,
-                       input_ssObject_filename=input_ssObject_filename,
+                       input_ssObject_filename=input_ssobject_filename,
                        skip_rows=skip_rows,
                        stop_after=stop_after).run()
 
