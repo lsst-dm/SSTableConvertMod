@@ -1,18 +1,21 @@
 from __future__ import annotations
 
-__all__ = ("FileTable", "IndexDict", "FileTableBuilder", "NoIndexError",
-           "FileTableInMem")
+__all__ = ("FileTable", "Indexer", "FileTableBuilder", "NoIndexError",
+           "FileTableInMem", "Indexer")
 
 from abc import ABC
 from dataclasses import dataclass, InitVar
 from itertools import islice
-from mmap import mmap
+from mmap import mmap, PROT_READ
 import pandas as pd
+import sqlite3
 import os
 from typing import (Iterable, Generator, ClassVar, Optional, Type,
-                    Mapping, Tuple, Union, Any, Dict)
+                    Mapping, Tuple, Union, Any, Dict, List)
 import pickle
 import csv
+import sys
+import time
 
 from .SSSchemaBase import TableSchema
 
@@ -30,16 +33,77 @@ class BuilderDescriptor:
         return wrapper
 
 
-class IndexDict(dict):
-    def insert(self, name, value):
-        dict.__setitem__(self, name, value)
-        return name[1]
+class Indexer:
+    def __init__(self, do_index: bool, filename: str, columns: Iterable[str]):
+        self.do_index = do_index
+        self.filename = filename
+        if do_index:
+            self.accumulate_len = 5000
+            self.columns = tuple(columns)
+            if os.path.exists(filename):
+                os.remove(filename)
+            self.db = sqlite3.connect(filename, timeout=10)
+            self.c = self.db.cursor()
+            command = f"create table IF NOT EXISTS ind " +\
+                f"{tuple(f'{c} text ' for c in columns)}"
+            command = command.replace("'", "").rstrip(',)')+')'
+            self.c.execute(command)
+            self.iteration = 0
+            self.insert_command = "insert into ind values " +\
+                f"{tuple('? ' for _ in range(len(columns)))}"
+            self.insert_command =\
+                self.insert_command.replace("'", "").rstrip(',)')+')'
+            self.tracker = [None]*self.accumulate_len
+            self.tracker_len = 0
+
+    def insert(self, generator) -> Generator:
+        if self.do_index:
+            values = tuple(generator)
+            self.tracker[self.tracker_len] = tuple(v for v, truth in
+                                                   values if truth)
+            self.tracker_len += 1
+            if self.tracker_len == self.accumulate_len:
+                with self.db:
+                    while True:
+                        try:
+                            self.c.executemany(self.insert_command,
+                                               self.tracker)
+                            break
+                        except sqlite3.OperationalError as e:
+                            if "locked" in str(e):
+                                time.sleep(0.1)
+                self.tracker_len = 0
+            yield from (value for value, _ in values)
+        else:
+            yield from (value for value, _ in generator)
+
+    def __del__(self):
+        if self.do_index:
+            while True:
+                try:
+                    if self.tracker_len:
+                        with self.db:
+                            self.c.executemany(self.insert_command,
+                                            self.tracker[:self.tracker_len])
+                            self.tracker_len = 0
+                    #self.c.execute("CREATE INDEX objid on ind(ssObjectId)")
+                    self.db.commit()
+                    self.db.close()
+                    #self.c.executemany(self.insert_command,
+                    #                    self.tracker)
+                    break
+                except sqlite3.OperationalError as e:
+                    if "locked" in str(e):
+                        time.sleep(1)
 
 
 @dataclass
 class NoIndexError:
     __slots__ = ("row",)
     row: Dict
+
+    def __len__(self):
+        return len(self.row)
 
 
 class FileTableBuilder(ABC):
@@ -50,14 +114,15 @@ class FileTableBuilder(ABC):
                      expected to change, and b) support files that do not have
                      headers.
     """
-    input_schema: ClassVar[Tuple[Union[Type[TableSchema], str], ...]]
     # This is the schema of the input file
+    input_schema: ClassVar[Tuple[Union[Type[TableSchema], str], ...]]
+    INDEXER: Optional[str] = None
 
     def __init__(self, parent: FileTable, input_filename: str,
                  output_filename: str, skip_rows: int,
                  stop_after: Optional[int] = None,
                  columns: Optional[Iterable[ColumnName]] = None,
-                 do_index: Optional[bool] = False):
+                 do_index: Optional[bool] = True):
         """
         Parameters
         ----------
@@ -115,22 +180,27 @@ class FileTableBuilder(ABC):
         The function itself yields a generator for each row yielded from
         the input_rows generator, making it a generator of generators.
         """
+        registry = self.parent.schema.registry
         if columns is None:
-            registry = self.parent.schema.registry
+            fields = self.parent.schema.fields
         else:
-            registry = self.parent.schema.registry_subset(columns)
+            fields = columns
         # make the generator objects for each column
         if stop_after is not None:
             stop: Optional[int] = skip_rows + stop_after
         else:
             stop = None
-        for file_row in islice(input_rows, skip_rows, stop):
+        for i, file_row in enumerate(islice(input_rows, skip_rows, stop)):
             if file_row == '\n':
                 return
-            file_row_interp = self._intrepret_row(file_row.decode())
+            try:
+                file_row_interp = self._intrepret_row(file_row.decode())
+            except UnicodeDecodeError:
+                print(f"Error processing {self.input_filename}")
+                sys.exit(1)
             yield (registry[column](file_row_interp) if column in registry else
                    "\\N"
-                   for column in self.parent.schema.fields)
+                   for column in fields)
 
     def _intrepret_row(self, interp_row: str) -> Dict:
         """A method responsible for converting a string representation of
@@ -140,29 +210,29 @@ class FileTableBuilder(ABC):
                                      interp_row.split(','))}
 
     def run(self):
-        indexes = IndexDict()
-        with open(self.input_filename, "r+b") as in_file,\
-                open(self.output_filename, 'w+') as out_file:
-            writer = csv.writer(out_file, quoting=csv.QUOTE_NONE)
+        if self.INDEXER is not None:
+            indexer = self.INDEXER
+        else:
+            indexer = Indexer
+        indexes = indexer(self.do_index,
+                          self.output_filename+".sidecar",
+                          tuple(self.parent.index_columns)
+                          )
+        with open(self.input_filename, "rb") as in_file,\
+                open(self.output_filename, 'w+', newline='') as out_file:
+            writer = csv.writer(out_file, quoting=csv.QUOTE_NONE,
+                                lineterminator="\n")
             writer.writerow(self.parent.schema.fields.keys())
-            with mmap(in_file.fileno(), 0) as mm_in:
+            with mmap(in_file.fileno(), 0, prot=PROT_READ) as mm_in:
                 rows_generator = iter(mm_in.readline, b"")
                 rows = self._make_rows(rows_generator, self.columns,
                                        self.skip_rows,
                                        self.stop_after)
-                if self.do_index:
-                    writer.writerows((indexes.insert((self.index_pos[i],
-                                                      b),
-                                                     out_file.tell())
-                                      if i in self.index_pos else b
-                                      for i, b
-                                      in enumerate(row_gen)) for row_gen in
-                                     rows)
-                else:
-                    writer.writerows(rows)
-        if self.do_index and self.parent.index_columns and indexes:
-            with open(self.output_filename+".sidecar", "w+b") as sidecar:
-                pickle.dump(indexes, sidecar)
+                writer.writerows(indexes.insert(
+                    (b,
+                     i in self.index_pos
+                     )
+                    for i, b in enumerate(row_gen)) for row_gen in rows)
 
 
 @dataclass
@@ -216,7 +286,7 @@ class FileTable(ABC):
     # When opening a file containing with the table information, create an
     # index if a side-car is not present
 
-    indexes: Optional[IndexDict] = None
+    indexes: Optional[sqlite3.Connection] = None
     # Object that defines the indexes available to do lookups based on
     # index_columns
 
@@ -257,8 +327,9 @@ class FileTable(ABC):
 
     def _open(self, do_index: bool):
         if self.filename is not None:
-            self._file_handle = open(self.filename, 'r+b')
-            self._mmap = mmap(self._file_handle.fileno(), 0)
+            self._file_handle = open(self.filename, 'rb')
+            self._mmap = mmap(self._file_handle.fileno(), 0,
+                              prot=PROT_READ)
 
             sidecar_path = f"{self.filename}.sidecar"
             if os.path.exists(sidecar_path):
@@ -269,31 +340,35 @@ class FileTable(ABC):
                 start_loc = self._mmap.tell()
                 for line in self:
                     for pos, column in self.index_pos.items():
-                        self.indexes.insert((column, line[column]),
+                        self.indexes.insert((column, str(line[column])),
                                             start_loc)
                     start_loc = self._mmap.tell()
                 with open(sidecar_path, 'w+b') as f:
                     pickle.dump(self.indexes, f)
+                self._seek(0)
 
     def get_with_index(self, identifier: Tuple[ColumnName, Any]) ->\
-            Union[Mapping[ColumnName, Any], NoIndexError]:
+            Union[List[Mapping[ColumnName, Any]], NoIndexError]:
         if self.indexes is None:
             raise AttributeError("Can only seek if an index is built")
         location = self.indexes.get(identifier, None)
         if location is None:
-            return NoIndexError({column: '\\N'
-                                 for column in self.schema.fields.items()})
+            return NoIndexError([{column: '\\N'
+                                 for column in self.schema.fields.items()}])
         if self._mmap is None:
             raise AttributeError("file was never opened, was a filename"
                                  "supplied")
-        self._seek(location)
-        line = self._mmap.readline().decode().split(',')
-        return self._load_line(line)
+        results = []
+        for loc in location:
+            self._seek(loc)
+            line = self._mmap.readline().decode().split(',')
+            results.append(self._load_line(line))
+        return results
 
     def _load_line(self, line: Iterable[str]) -> Mapping[ColumnName, Any]:
         d = {}
         for (name, columnType), item in zip(self.schema.fields.items(), line):
-            if item == '\\N' or item == '\\N\r\n':
+            if item == '\\N' or item == '\\N\n':
                 value = '\\N'
             else:
                 value = eval(columnType)(item)  # type: ignore
@@ -331,11 +406,11 @@ class FileTableInMem(FileTable):
             self.df: pd.DataFrame = pd.read_csv(self.filename)
 
     def get_with_index(self, identifier: Tuple[ColumnName, Any]) ->\
-            Union[Mapping[ColumnName, Any], NoIndexError]:
+            Union[List[Mapping[ColumnName, Any]], NoIndexError]:
         result =\
             self.df.query(f"{identifier[0]} == {identifier[1]}").to_dict('r')
         if result:
-            return result[0]
+            return result
         else:
             return NoIndexError({column: '\\N'
                                  for column in self.schema.fields.items()})

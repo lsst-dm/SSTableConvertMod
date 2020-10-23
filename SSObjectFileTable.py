@@ -4,18 +4,20 @@ __all__ = ("SSObjectFileTable",)
 
 import csv
 from dataclasses import dataclass
-from glob import glob
+from itertools import islice
+import time
 from typing import (Optional, Iterable, Dict, Generator, List, Set,
-                    Union)
+                    Union, Any)
+import sqlite3
 
 from .base import (FileTable, FileTableInMem, FileTableBuilder, NoIndexError)
 from .schemas import SSObject, DIASource, MPCORB
 from .customTypes import ColumnName
-from . import MPCORBFT, DiaSourceFT
 
 
 @dataclass
 class SSObjectRow:
+    ssobjectid: Any
     dia_list: List
     mpc_entry: Union[Dict, NoIndexError]
 
@@ -25,10 +27,63 @@ class SSObjectTuple(tuple):
         return self
 
 
+class SSObjectKey(str):
+    def decode(self):
+        return self
+
+
+class JointIndex:
+    def __init__(self, dia_sidecar: str, mpc_sidecar: str):
+        self.dia_db = sqlite3.connect(dia_sidecar)
+        self.dia_cursor = self.dia_db.cursor()
+        self.dia_cursor.execute("select * from ind limit 1")
+        self.dia_schema = [description[0] for description in
+                           self.dia_cursor.description]
+
+        self.mpc_db = sqlite3.connect(mpc_sidecar)
+        self.mpc_cursor = self.mpc_db.cursor()
+        self.mpc_cursor.execute("select * from ind limit 1")
+        self.mpc_schema = [description[0] for description in
+                           self.mpc_cursor.description]
+        self.count = 0
+        self.start = time.time()
+
+    def get_ssobject_keys(self) -> Generator[SSObjectKey, None, None]:
+        seen: Set[str] = set()
+        for entry in self.dia_db.execute('select ssObjectId from ind'):
+            if entry[0] not in seen:
+                seen.add(entry[0])
+                yield SSObjectKey(entry)
+
+    def build_SSObjectRow(self, key: SSObjectKey) -> SSObjectRow:
+        print(f"building object {self.count} "
+              f"{self.count/(time.time() - self.start)}", end='\r')
+        self.count += 1
+        dia_list = []
+        key = key[2:-3]
+        for entry in self.dia_db.execute('select * from ind where '
+                                         'ssObjectId = ?', (key,)):
+            dia_list.append({k: v for k, v in
+                             zip(self.dia_schema, entry)})
+        mpc_row = self.mpc_cursor.execute('select * from ind '
+                                          'where ssObjectId = ?',
+                                          (key,))
+        try:
+            mpc_entry = {k: v for k, v in
+                         zip(self.mpc_schema, next(mpc_row))}
+        except Exception:
+            mpc_entry = NoIndexError
+        return SSObjectRow(key, dia_list, mpc_entry)
+
+    def __del__(self):
+        self.dia_db.close()
+        self.mpc_db.close()
+
+
 class SSObjectBuilder(FileTableBuilder):
     input_schema = (DIASource, MPCORB)
 
-    def __init__(self, parent: FileTable, input_dia_glob: str,
+    def __init__(self, parent: FileTable, input_dia_filename: str,
                  output_filename: str, input_mpc_filename: str,
                  skip_rows: int,
                  stop_after: Optional[int] = None,
@@ -38,31 +93,22 @@ class SSObjectBuilder(FileTableBuilder):
         self.skip_rows = skip_rows
         self.stop_after = stop_after
         self.columns = columns
-        self.dia_files = []
-        for name in glob(input_dia_glob):
-            self.dia_files.append(DiaSourceFT(filename=name))
-        self.mpc_file = MPCORBFT(filename=input_mpc_filename)
+        self.indexer = JointIndex(input_dia_filename, input_mpc_filename)
 
     def _get_objects_list_generator(self) -> Generator:
-        objects_set: Set = set()
-        for dia in self.dia_files:
-            objects_set.update(dia.indexes)  # type: ignore
-        return (SSObjectTuple(obj) for obj in objects_set)
+        return self.indexer.get_ssobject_keys()
 
     def _intrepret_row(self, object_id):
-        rows = []
-        for dia in self.dia_files:
-            if object_id in dia.indexes:
-                rows.append(dia.get_with_index(object_id))
-        mpc_entry = self.mpc_file.get_with_index(object_id)
-        return SSObjectRow(rows, mpc_entry)
+        return self.indexer.build_SSObjectRow(object_id)
 
     def run(self):
-        with open(self.output_filename, 'w+') as out_file:
-            writer = csv.writer(out_file, quoting=csv.QUOTE_NONE)
+        with open(self.output_filename, 'w+', newline="") as out_file:
+            writer = csv.writer(out_file, quoting=csv.QUOTE_NONE,
+                                lineterminator="\n")
             writer.writerow(self.parent.schema.fields.keys())
             row_generator = self._get_objects_list_generator()
-            rows = self._make_rows(row_generator)
+            rows = self._make_rows(islice(row_generator, self.skip_rows,
+                                   self.stop_after))
             writer.writerows(rows)
 
 

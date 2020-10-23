@@ -7,7 +7,7 @@ from glob import glob
 from itertools import islice
 from typing import Dict, Optional, Iterable, Generator
 
-from .base import FileTableInMem, FileTableBuilder, FileTable
+from .base import FileTableBuilder, FileTable, Indexer
 from .schemas import MPCORB
 from .customTypes import ColumnName
 
@@ -30,6 +30,11 @@ class MPCORBBuilder(FileTableBuilder):
         self.input_fileglob = input_fileglob
         self._mpc_skip_start = skip_rows
         self._mpc_stop_after = stop_after
+        self.do_index = True
+
+        self.index_pos = {self.parent.schema.field_pos[column]: column
+                          for column in
+                          self.parent.index_columns}
 
     def _get_input_rows(self) -> Generator:
         if self._mpc_stop_after is not None:
@@ -46,18 +51,23 @@ class MPCORBBuilder(FileTableBuilder):
                                      interp_row.split())}
 
     def run(self):
-        with open(self.output_filename, 'w+') as out_file:
-            writer = csv.writer(out_file, quoting=csv.QUOTE_NONE)
+        with open(self.output_filename, 'w+', newline='') as out_file:
+            indexer = Indexer(self.do_index,
+                              self.output_filename+".sidecar",
+                              self.parent.index_columns)
+            writer = csv.writer(out_file, quoting=csv.QUOTE_NONE,
+                                lineterminator="\n")
             writer.writerow(self.parent.schema.fields.keys())
             rows_generator = self._get_input_rows()
             rows = self._make_rows(rows_generator, self.columns,
                                    self.skip_rows,
                                    self.stop_after)
-            writer.writerows(rows)
+            writer.writerows(indexer.insert(
+                (b, i in self.index_pos) for i, b in enumerate(row_gen))
+                for row_gen in rows)
 
 
-class MPCORBFileTable(FileTableInMem):
+class MPCORBFileTable(FileTable):
     schema = MPCORB
-    index_columns = tuple(ColumnName(x) for x in ("mpcDesignation",
-                                                  "ssObjectId",))
+    index_columns = tuple(ColumnName(x) for x in ("ssObjectId", "mpcH"))
     builder = MPCORBBuilder

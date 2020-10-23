@@ -3,7 +3,6 @@ from __future__ import annotations
 __all__ = ("MPCORB")
 
 from datetime import datetime
-from typing import Iterable
 
 from ..base import TableSchema
 
@@ -32,7 +31,7 @@ class MPCORB(TableSchema):
     epoch: float
     # MPCORB: Epoch (in MJD, .0 TT)
 
-    M: float
+    tPeri: float
     # MPCORB: Mean anomaly at the epoch, in degrees
 
     peri: float
@@ -50,7 +49,7 @@ class MPCORB(TableSchema):
     n: float
     # MPCORB: Mean daily motion (degrees per day)
 
-    a: float
+    q: float
     # MPCORB: Semimajor axis (AU)
 
     uncertaintyParameter: str
@@ -98,6 +97,3 @@ class MPCORB(TableSchema):
 
     lastIncludedObservation: float
     # MPCORB: Date of last observation included in orbit solution
-
-    covariance: Iterable[float]
-    # MPCORB: Covariances, details TBD
