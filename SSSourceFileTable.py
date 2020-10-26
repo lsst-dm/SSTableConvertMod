@@ -2,13 +2,9 @@ from __future__ import annotations
 
 __all__ = ("SSSourceFileTable",)
 
-from typing import (Optional, Iterable, Dict, cast)
-import warnings
-
-from .base import (FileTable, FileTableBuilder, NoIndexError)
+from .base import FileTable, FileTableBuilder
 from .schemas import SSSource
 from .customTypes import ColumnName
-from . import MPCORBFT, SSObjectFT
 
 
 class SSSourceBuilder(FileTableBuilder):

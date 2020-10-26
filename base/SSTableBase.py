@@ -12,10 +12,8 @@ import sqlite3
 import os
 from typing import (Iterable, Generator, ClassVar, Optional, Type,
                     Mapping, Tuple, Union, Any, Dict, List)
-import pickle
 import csv
 import sys
-import time
 
 from .SSSchemaBase import TableSchema
 
@@ -64,14 +62,8 @@ class Indexer:
             self.tracker_len += 1
             if self.tracker_len == self.accumulate_len:
                 with self.db:
-                    while True:
-                        try:
-                            self.c.executemany(self.insert_command,
-                                               self.tracker)
-                            break
-                        except sqlite3.OperationalError as e:
-                            if "locked" in str(e):
-                                time.sleep(0.1)
+                    self.c.executemany(self.insert_command,
+                                       self.tracker)
                 self.tracker_len = 0
             yield from (value for value, _ in values)
         else:
@@ -79,22 +71,14 @@ class Indexer:
 
     def __del__(self):
         if self.do_index:
-            while True:
-                try:
-                    if self.tracker_len:
-                        with self.db:
-                            self.c.executemany(self.insert_command,
-                                            self.tracker[:self.tracker_len])
-                            self.tracker_len = 0
-                    #self.c.execute("CREATE INDEX objid on ind(ssObjectId)")
-                    self.db.commit()
-                    self.db.close()
-                    #self.c.executemany(self.insert_command,
-                    #                    self.tracker)
-                    break
-                except sqlite3.OperationalError as e:
-                    if "locked" in str(e):
-                        time.sleep(1)
+            if self.tracker_len:
+                with self.db:
+                    self.c.executemany(self.insert_command,
+                                       self.tracker[:self.tracker_len])
+                    self.tracker_len = 0
+            self.c.execute("CREATE INDEX objid on ind(ssObjectId)")
+            self.db.commit()
+            self.db.close()
 
 
 @dataclass
@@ -331,40 +315,6 @@ class FileTable(ABC):
             self._mmap = mmap(self._file_handle.fileno(), 0,
                               prot=PROT_READ)
 
-            sidecar_path = f"{self.filename}.sidecar"
-            if os.path.exists(sidecar_path):
-                with open(sidecar_path, 'rb') as f:
-                    self.indexes = pickle.load(f)
-            elif do_index:
-                self.indexes = IndexDict()
-                start_loc = self._mmap.tell()
-                for line in self:
-                    for pos, column in self.index_pos.items():
-                        self.indexes.insert((column, str(line[column])),
-                                            start_loc)
-                    start_loc = self._mmap.tell()
-                with open(sidecar_path, 'w+b') as f:
-                    pickle.dump(self.indexes, f)
-                self._seek(0)
-
-    def get_with_index(self, identifier: Tuple[ColumnName, Any]) ->\
-            Union[List[Mapping[ColumnName, Any]], NoIndexError]:
-        if self.indexes is None:
-            raise AttributeError("Can only seek if an index is built")
-        location = self.indexes.get(identifier, None)
-        if location is None:
-            return NoIndexError([{column: '\\N'
-                                 for column in self.schema.fields.items()}])
-        if self._mmap is None:
-            raise AttributeError("file was never opened, was a filename"
-                                 "supplied")
-        results = []
-        for loc in location:
-            self._seek(loc)
-            line = self._mmap.readline().decode().split(',')
-            results.append(self._load_line(line))
-        return results
-
     def _load_line(self, line: Iterable[str]) -> Mapping[ColumnName, Any]:
         d = {}
         for (name, columnType), item in zip(self.schema.fields.items(), line):
@@ -396,8 +346,6 @@ class FileTable(ABC):
         # These should be done in this order
         if self._mmap is not None:
             self._mmap.close()
-        if self._file_handle is not None:
-            self._file_handle.close()
 
 
 class FileTableInMem(FileTable):
