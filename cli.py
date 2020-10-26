@@ -81,8 +81,6 @@ def sssource(input_filename, output_filename, skip_rows, stop_after):
         stop_after = int(stop_after)
     SSSourceFT.builder(input_filename=input_filename,
                        output_filename=output_filename,
-                       skip_rows=skip_rows,
-                       stop_after=stop_after).run()
 
 
 cli.add_command(mpcorb)

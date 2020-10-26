@@ -3,7 +3,8 @@ from __future__ import annotations
 __all__ = ()
 
 from sys import maxsize
-#import astropy.coordinates as apc
+import astropy.coordinates as apc
+import astropy.units as u # or use conversion factors to save compute time?
 from hashlib import sha1
 from typing import MutableMapping, Mapping, TYPE_CHECKING
 from functools import lru_cache
@@ -276,11 +277,171 @@ def return_predicted_dec_sigma(row: Mapping) -> str:
 def return_heliocentri_x(row: Mapping) -> str:
     return row['Ast-Sun(J2000x)(km)']
 
+@SSSource.register(ColumnName("eclipticBeta"))
+def make_ecliptic_beta(row: Mapping):
+    return f"{build_ecliptic_coord(row['ra'], row['dec']).lat}"
+
+@SSSource.register(ColumnName('galacticL'))
+def make_galactic_l(row: Mapping):
+    return f"{build_galactic_coord(row['ra'], row['dec']).l}"
+
+@SSSource.register(ColumnName('galacticB'))
+def make_galactic_b(row: Mapping):
+    return f"{build_galactic_coord(row['ra'], row['dec']).b}"
+
+@SSSource.register(ColumnName('phaseAngle'))
+def phaseAngle(row: Mapping) -> str:
+    return f'{float(row["Sun-Ast-Obs(deg)"])}'
+
+#Do all calculations have to happen inside f strings?
+@SSSource.register(ColumnName('heliocentricDist'))
+def helioDist(row: Mapping) -> str:
+    x = float(row['Ast-Sun(J2000x)(km)'])
+    y = float(row['Ast-Sun(J2000y)(km)'])
+    z = float(row['Ast-Sun(J2000z)(km)'])
+    d=np.sqrt((x)**2+(y)**2+(z)**2)*u.km
+    dau=d.to(u.au)
+    return f"{dau.value}"
+
+@SSSource.register(ColumnName('topocentricDist'))
+def topoDist(row: Mapping) -> str:
+    d=float(row['AstRange(km)'])
+    dkm=d*u.km
+    dau=dkm.to(u.au)
+    return f"{dau.value}"
+
+@SSSource.register(ColumnName('predictedMagnitude'))
+def predMag(row: Mapping) -> str:
+    return f'{float(row["Filtermag"])}'
+
+@SSSource.register(ColumnName('predictedMagnitudeSigma'))
+def predMagSig(row: Mapping) -> str:
+    return f'{float(row["PhotometricSigma(mag)"])}'
+
+@SSSource.register(ColumnName('residualRa'))
+def residualRa(row: Mapping) -> str:
+    ra = float(row['AstRa(deg)'])
+    rasm = float(row['AstRASigma(mas)'])*u.mas
+    ras = rasm.to(u.deg).value
+    ran = np.random.normal(ra,ras)
+    return f"{ran}"
+
+@SSSource.register(ColumnName('residualDec'))
+def residualDec(row: Mapping) -> str:
+    dec = float(row['AstDec(deg)'])
+    decsm = float(row['AstDecSigma(mas)'])*u.mas
+    decs = decsm.to(u.deg).value
+    ran = np.random.normal(dec,decs)
+    return f"{ran}"
+
+@SSSource.register(ColumnName('predictedRaSigma'))
+def predRaSigma(row: Mapping) -> str:
+    ra = float(row['AstRaSigma(mas)'])*u.mas
+    return f"{ra.to(u.deg).value}"
+
+@SSSource.register(ColumnName('predictedDecSigma'))
+def predDecSigma(row: Mapping) -> str:
+    dec = float(row['AstDecSigma(mas)'])*u.mas
+    return f"{dec.to(u.deg).value}"
+
+#@SSSource.register(ColumnName('predictedRaDecCov'))
+#add things
+
+@SSSource.register(ColumnName('heliocentricX'))
+def helioX(row: Mapping) -> str:
+    ex = float(row['Ast-Sun(J2000x)(km)'])*u.km
+    return f"{ex.to(u.au).value}"
+
+@SSSource.register(ColumnName('heliocentricY'))
+def helioY(row: Mapping) -> str:
+    wy = float(row['Ast-Sun(J2000y)(km)'])*u.km
+    return f"{wy.to(u.au).value}"
+
+@SSSource.register(ColumnName('heliocentricZ'))
+def helioZ(row: Mapping) -> str:
+    ze = float(row['Ast-Sun(J2000z)(km)'])*u.km
+    return f"{ze.to(u.au).value}"
+
+#@SSSource.register(ColumnName('heliocentricVX'))
+#add things
+
+#@SSSource.register(ColumnName('heliocentricVY'))
+#add things
+
+#@SSSource.register(ColumnName('heliocentricVZ'))
+#add things
+
+@SSSource.register(ColumnName('topocentricX'))
+def topoX(row: Mapping) -> str:
+    ra = float(row['AstRa(deg)'])
+    dec = float(row['AstDec(deg)'])
+    dkm = float(row['AstRange(km)'])*u.km
+    dau = dkm.to(u.au)
+    x = np.cos(dec*np.pi/180.0)*np.cos(ra*np.pi/180.0)*dau.value
+    return f"{x}"
+
+@SSSource.register(ColumnName('topocentricY'))
+def topoY(row: Mapping) -> str:
+    ra = float(row['AstRa(deg)'])
+    dec = float(row['AstDec(deg)'])
+    dkm = float(row['AstRange(km)'])*u.km
+    dau = dkm.to(u.au)
+    y = np.cos(dec*np.pi/180.0)*np.sin(ra*np.pi/180.0)*dau.value
+    return f"{y}"
+
+@SSSource.register(ColumnName('topocentricZ'))
+def topoZ(row: Mapping) -> str:
+    dec = float(row['AstDec(deg)'])
+    dkm = float(row['AstRange(km)'])*u.km
+    dau = dkm.to(u.au)
+    z=np.sin(dec*np.pi/180.0)*dau.value
+    return f"{z}"
+
+@SSSource.register(ColumnName('topocentricVX'))
+def topoVX(row: Mapping) -> str:
+    ra = float(row['AstRa(deg)'])
+    dec = float(row['AstDec(deg)'])
+    dkm = float(row['AstRange(km)'])*u.km
+    dau = dkm.to(u.au)
+    vr = float(row['AstRangeRate(km/s)'])*(u.km/u.s)
+    vda = vr.to(u.au/u.day).value
+    vra = float(row['AstRARate(deg/day)'])
+    vdec = float(row['AstDecRate(deg/day)'])
+    vx = np.cos(dec*np.pi/180.0)*np.cos(ra*np.pi/180.0)*vda + dau.value * np.cos(dec*np.pi/180.0)*np.sin(ra*np.pi/180.0)*(vra*np.pi/180.0) + dau.value * np.sin(dec*np.pi/180.0)*np.cos(ra*np.pi/180.0) * (vdec* np.pi/180.0)
+    return f"{vx}"
+
+@SSSource.register(ColumnName('topocentricVY'))
+def topoVY(row: Mapping) -> str:
+    ra = float(row['AstRa(deg)'])
+    dec = float(row['AstDec(deg)'])
+    dkm = float(row['AstRange(km)'])*u.km
+    dau = dkm.to(u.au)
+    vr = float(row['AstRangeRate(km/s)'])*(u.km/u.s)
+    vda = vr.to(u.au/u.day).value
+    vra = float(row['AstRARate(deg/day)'])
+    vdec = float(row['AstDecRate(deg/day)'])
+    vy = np.cos(dec*np.pi/180.0)*np.sin(ra*np.pi/180.0)*vda - dau.value * np.cos(dec*np.pi/180.0)*np.cos(ra*np.pi/180.0)*(vra*np.pi/180.0) + dau.value * np.sin(dec*np.pi/180.0)*np.sin(ra*np.pi/180.0)*(vdec* np.pi/180.0)
+    return f"{vy}"
+
+@SSSource.register(ColumnName('topocentricVZ'))
+def topoVZ(row: Mapping) -> str:
+    dec = float(row['AstDec(deg)'])
+    dkm = float(row['AstRange(km)'])*u.km
+    dau = dkm.to(u.au)
+    vr = float(row['AstRangeRate(km/s)'])*(u.km/u.s)
+    vda = vr.to(u.au/u.day).value
+    vdec = float(row['AstDecRate(deg/day)'])
+    vz = np.sin(dec*np.pi/180.0)*vda - dau.value * np.cos(dec*np.pi/180.0)*(vdec* np.pi/180.0)
+    return f"{vz}"
 
 @SSSource.register(ColumnName("heliocentricY"))
 def return_heliocentri_y(row: Mapping) -> str:
     return row['Ast-Sun(J2000y)(km)']
 
+@lru_cache(maxsize=1000)
+def build_galactic_coord(ra: float, dec: float) -> apc.SkyCoord:
+    coord = build_astropy_coord(ra, dec)
+    return coord.transform_to(apc.Galactic)
 
 @SSSource.register(ColumnName("heliocentricZ"))
 def return_heliocentri_z(row: Mapping) -> str:
