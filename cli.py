@@ -1,6 +1,6 @@
 import click
 
-from . import (MPCORBFT, DiaSourceFT, SSObjectFT, SSSourceFT, )
+from . import (MPCORBFT, DiaSourceFT, SSObjectFT, SSSourceFT)
 from .accumulator import run_server
 
 
@@ -80,7 +80,8 @@ def sssource(input_filename, output_filename, skip_rows, stop_after):
     if stop_after is not None:
         stop_after = int(stop_after)
     SSSourceFT.builder(input_filename=input_filename,
-                       output_filename=output_filename,
+                       output_filename=output_filename, do_index=False,
+                       skip_rows=skip_rows).run()
 
 
 cli.add_command(mpcorb)

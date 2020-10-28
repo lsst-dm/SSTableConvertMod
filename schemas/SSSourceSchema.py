@@ -8,6 +8,10 @@ from ..base import TableSchema
 class SSSource(TableSchema):
     ssObjectId: int
     diaSourceId: int
+    mpcUniqueId: int
+    nearbyObj: int
+    nearbyObjDist: float
+    nearbyObjLnP: float
     eclipticLambda: float
     eclipticBeta: float
     galacticL: float
@@ -25,3 +29,12 @@ class SSSource(TableSchema):
     heliocentricX: float
     heliocentricY: float
     heliocentricZ: float
+    heliocentricVX: float
+    heliocentricVY: float
+    heliocentricVZ: float
+    topocentricX: float
+    topocentricY: float
+    topocentricZ: float
+    topocentricVX: float
+    topocentricVY: float
+    topocentricVZ: float
