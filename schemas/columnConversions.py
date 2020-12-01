@@ -200,7 +200,7 @@ def calculate_arc(row: SSObjectRow) -> str:
 # 2) How do you obtain a list of phase angles for one object? SOLVED
 # 3) How do you return fit_info dictionary? SOLVED SORTA
 # 4) Where do weights come in? 1/mag_sigma^2 SOLVED
-# 5) How do you find the Ndata column? 
+# 5) How do you find the Ndata column?
 @SSObject.register(ColumnName("uH"))
 def uh_fit(row: SSObjectRow) -> str:
     uH, uG12, uHErr, uG12err,uH_uG12_cov,uChi2  = band_fitter('u',row,row.ssobjectid)
@@ -364,7 +364,7 @@ def band_fitter(band:str,row:SSObjectRow,oid:str) -> Tuple[float,float,float,flo
     mag_list = np.array([d['mag'] for d in row.dia_list if d['Filter'] == band])
     a = np.array([d['phaseAngle'] for d in row.dia_list if d['Filter'] == band]) * DEG2RAD
     weights = np.array([(1/(d['magSigma']))**2 for d in row.dia_list if d['Filter'] == band])
-    obs = Obs.from_dict({'alpha':alpha,'mag':mag})
+    obs = Obs.from_dict({'alpha':a,'mag':mag_list,'weights':weights})
     var = HG12.from_obs(obs,fitter,'mag')
     fi=fitter.fit_info
     param_cov = fi['param_cov']
