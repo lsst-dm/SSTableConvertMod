@@ -17,8 +17,6 @@ class DIASource(TableSchema):
     ra: float
     raSigma: float
     decl: float
-    filter: str
-    mag: float
     declSigma: float
     ra_decl_Cov: float
     x: float
@@ -27,3 +25,7 @@ class DIASource(TableSchema):
     ySigma: float
     x_y_Cov: float
     snr: float
+    phaseAngle: float
+    filter: str
+    mag: float
+    magSigma: float

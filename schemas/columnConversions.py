@@ -10,6 +10,10 @@ from typing import MutableMapping, Mapping, TYPE_CHECKING, Tuple
 from functools import lru_cache
 import math
 import numpy as np
+from sbpy.data import Obs
+from sbpy.photometry import HG12
+from astropy.modeling.fitting import LevMarLSQFitter
+fitter = LevMarLSQFitter()
 
 from .DiaSourceSchema import DIASource
 from .MPCORBSchema import MPCORB
@@ -103,6 +107,9 @@ def return_decl(row: Mapping) -> str:
 def build_totFlux(row: Mapping) -> str:
     return row["Filtermag"]
 
+@DIASource.register(ColumnName("magSigma"))
+def build_ms(row: Mapping) -> str:
+    return row["PhotometricSigma(mag)"]
 
 @DIASource.register(ColumnName("midPointTai"))
 def build_mid_point_time(row: Mapping) -> str:
@@ -113,6 +120,9 @@ def build_mid_point_time(row: Mapping) -> str:
 def build_dia_filter(row: Mapping) -> str:
     return row["Filter"]
 
+@DIASource.register(ColumnName("phaseAngle")):
+def build_dia_phase(row: Mapping) -> str:
+    return row['Sun-Ast-Obs(deg)']
 
 @MPCORB.register(ColumnName("mpcDesignation"))
 def return_mpcDesignation(row: Mapping) -> str:
@@ -183,8 +193,15 @@ def calculate_arc(row: SSObjectRow) -> str:
     sort_dates = sorted(float(x) for x in midPointTai_list)
     return f"{sort_dates[-1] - sort_dates[0]}"
 
-
+# Questions,
+# 1) How do you determine which band is being fit? SOLVED
+# 2) How do you obtain a list of phase angles for one object?
+# 3) How do you return fit_info dictionary? SOLVED SORTA
+# 4) Where do weights come in? 1/mag_sigma^2
 @SSObject.register(ColumnName("uH"))
+def uh_fit(row: SSObjectRow) -> str:
+    uH, uG12, uHErr, uG12err,uH_uG12_cov,uChi2  = band_fitter('u',row)
+    return f"{uH}"
 @SSObject.register(ColumnName("gH"))
 @SSObject.register(ColumnName("rH"))
 @SSObject.register(ColumnName("iH"))
@@ -198,7 +215,21 @@ def pass_through_h(row: SSObjectRow) -> str:
         return '\\N'
     return f"{entry['mpcH']}"
 
-
+@lru_cache(maxsize=1000)
+def band_fitter(band:str,row:SSObjectRow) -> Tuple[float,float,float,float]:
+    mag_list = np.array([d['mag'] for d in row.dia_list if d['Filter'] == band])
+    a = np.array([d['phaseAngle'] for d in row.dia_list if d['Filter'] == band]) * DEG2RAD
+    weights = np.array([(1/(d['magSigma']))**2 for d in row.dia_list if d['Filter'] == band])
+    obs = Obs.from_dict({'alpha':alpha,'mag':mag})
+    var = HG12.from_obs(obs,fitter,'mag')
+    fi=fitter.fit_info
+    param_cov = fi['param_cov']
+    fvec = fi['fvec']
+    H_err = np.sqrt(param_cov[0][0])
+    G12_err = np.sqrt(param_cov[1][1])
+    H_G12_cov = param_cov[0][1]
+    chi_2 = np.sum(fvec**2 * weights)
+    return (var.H.value,var.G12.value,H_err,G12_err,H_G12_cov,chi_2)
 # ### SSSource ####
 @SSSource.register(ColumnName("eclipticLambda"))
 def make_ecliptic_lamba(row: Mapping):
