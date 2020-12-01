@@ -8,6 +8,8 @@ from coord import CelestialCoord, degrees, _Angle, util
 from hashlib import sha1
 from typing import MutableMapping, Mapping, TYPE_CHECKING, Tuple
 from functools import lru_cache
+from cachetools import cached
+from cachetools.keys import hashkey
 import math
 import numpy as np
 from sbpy.data import Obs
@@ -195,18 +197,34 @@ def calculate_arc(row: SSObjectRow) -> str:
 
 # Questions,
 # 1) How do you determine which band is being fit? SOLVED
-# 2) How do you obtain a list of phase angles for one object?
+# 2) How do you obtain a list of phase angles for one object? SOLVED
 # 3) How do you return fit_info dictionary? SOLVED SORTA
-# 4) Where do weights come in? 1/mag_sigma^2
+# 4) Where do weights come in? 1/mag_sigma^2 SOLVED
+# 5) How do you find the Ndata column? 
 @SSObject.register(ColumnName("uH"))
 def uh_fit(row: SSObjectRow) -> str:
-    uH, uG12, uHErr, uG12err,uH_uG12_cov,uChi2  = band_fitter('u',row)
+    uH, uG12, uHErr, uG12err,uH_uG12_cov,uChi2  = band_fitter('u',row,row.ssobjectid)
     return f"{uH}"
 @SSObject.register(ColumnName("gH"))
+def gh_fit(row: SSObjectRow) -> str:
+    gH, gG12, gHErr, gG12err,gH_gG12_cov,gChi2  = band_fitter('g',row,row.ssobjectid)
+    return f"{gH}"
 @SSObject.register(ColumnName("rH"))
+def rh_fit(row: SSObjectRow) -> str:
+    rH, rG12, rHErr, rG12err,rH_rG12_cov,rChi2  = band_fitter('r',row,row.ssobjectid)
+    return f"{rH}"
 @SSObject.register(ColumnName("iH"))
+def ih_fit(row: SSObjectRow) -> str:
+    iH, iG12, iHErr, iG12err,iH_iG12_cov,iChi2  = band_fitter('i',row,row.ssobjectid)
+    return f"{iH}"
 @SSObject.register(ColumnName("zH"))
+def zh_fit(row: SSObjectRow) -> str:
+    zH, zG12, zHErr, zG12err,zH_zG12_cov,zChi2  = band_fitter('z',row,row.ssobjectid)
+    return f"{zH}"
 @SSObject.register(ColumnName("yH"))
+def yh_fit(row: SSObjectRow) -> str:
+    yH, yG12, yHErr, yG12err,yH_yG12_cov,yChi2  = band_fitter('y',row,row.ssobjectid)
+    return f"{yH}"
 def pass_through_h(row: SSObjectRow) -> str:
     entry = row.mpc_entry
     if entry is None:
@@ -215,8 +233,134 @@ def pass_through_h(row: SSObjectRow) -> str:
         return '\\N'
     return f"{entry['mpcH']}"
 
+@SSObject.register(ColumnName("uG12"))
+def uh_fit(row: SSObjectRow) -> str:
+    uH, uG12, uHErr, uG12err,uH_uG12_cov,uChi2  = band_fitter('u',row,row.ssobjectid)
+    return f"{uG12}"
+@SSObject.register(ColumnName("gG12"))
+def gh_fit(row: SSObjectRow) -> str:
+    gH, gG12, gHErr, gG12err,gH_gG12_cov,gChi2  = band_fitter('g',row,row.ssobjectid)
+    return f"{gG12}"
+@SSObject.register(ColumnName("rG12"))
+def rh_fit(row: SSObjectRow) -> str:
+    rH, rG12, rHErr, rG12err,rH_rG12_cov,rChi2  = band_fitter('r',row,row.ssobjectid)
+    return f"{rG12}"
+@SSObject.register(ColumnName("iG12"))
+def ih_fit(row: SSObjectRow) -> str:
+    iH, iG12, iHErr, iG12err,iH_iG12_cov,iChi2  = band_fitter('i',row,row.ssobjectid)
+    return f"{iG12}"
+@SSObject.register(ColumnName("zG12"))
+def zh_fit(row: SSObjectRow) -> str:
+    zH, zG12, zHErr, zG12err,zH_zG12_cov,zChi2  = band_fitter('z',row,row.ssobjectid)
+    return f"{zG12}"
+@SSObject.register(ColumnName("yG12"))
+def yh_fit(row: SSObjectRow) -> str:
+    yH, yG12, yHErr, yG12err,yH_yG12_cov,yChi2  = band_fitter('y',row,row.ssobjectid)
+    return f"{yG12}"
+
+@SSObject.register(ColumnName("uHErr"))
+def uh_fit(row: SSObjectRow) -> str:
+    uH, uG12, uHErr, uG12err,uH_uG12_cov,uChi2  = band_fitter('u',row,row.ssobjectid)
+    return f"{uHErr}"
+@SSObject.register(ColumnName("gHErr"))
+def gh_fit(row: SSObjectRow) -> str:
+    gH, gG12, gHErr, gG12err,gH_gG12_cov,gChi2  = band_fitter('g',row,row.ssobjectid)
+    return f"{gHErr}"
+@SSObject.register(ColumnName("rHErr"))
+def rh_fit(row: SSObjectRow) -> str:
+    rH, rG12, rHErr, rG12err,rH_rG12_cov,rChi2  = band_fitter('r',row,row.ssobjectid)
+    return f"{rHErr}"
+@SSObject.register(ColumnName("iHErr"))
+def ih_fit(row: SSObjectRow) -> str:
+    iH, iG12, iHErr, iG12err,iH_iG12_cov,iChi2  = band_fitter('i',row,row.ssobjectid)
+    return f"{iHErr}"
+@SSObject.register(ColumnName("zHErr"))
+def zh_fit(row: SSObjectRow) -> str:
+    zH, zG12, zHErr, zG12err,zH_zG12_cov,zChi2  = band_fitter('z',row,row.ssobjectid)
+    return f"{zHErr}"
+@SSObject.register(ColumnName("yHErr"))
+def yh_fit(row: SSObjectRow) -> str:
+    yH, yG12, yHErr, yG12err,yH_yG12_cov,yChi2  = band_fitter('y',row,row.ssobjectid)
+    return f"{yHErr}"
+
+@SSObject.register(ColumnName("uG12Err"))
+def uh_fit(row: SSObjectRow) -> str:
+    uH, uG12, uHErr, uG12err,uH_uG12_cov,uChi2  = band_fitter('u',row,row.ssobjectid)
+    return f"{uG12Err}"
+@SSObject.register(ColumnName("gG12Err"))
+def gh_fit(row: SSObjectRow) -> str:
+    gH, gG12, gHErr, gG12err,gH_gG12_cov,gChi2  = band_fitter('g',row,row.ssobjectid)
+    return f"{gG12Err}"
+@SSObject.register(ColumnName("rG12Err"))
+def rh_fit(row: SSObjectRow) -> str:
+    rH, rG12, rHErr, rG12err,rH_rG12_cov,rChi2  = band_fitter('r',row,row.ssobjectid)
+    return f"{rG12Err}"
+@SSObject.register(ColumnName("iG12Err"))
+def ih_fit(row: SSObjectRow) -> str:
+    iH, iG12, iHErr, iG12err,iH_iG12_cov,iChi2  = band_fitter('i',row,row.ssobjectid)
+    return f"{iG12Err}"
+@SSObject.register(ColumnName("zG12Err"))
+def zh_fit(row: SSObjectRow) -> str:
+    zH, zG12, zHErr, zG12err,zH_zG12_cov,zChi2  = band_fitter('z',row,row.ssobjectid)
+    return f"{zG12Err}"
+@SSObject.register(ColumnName("yG12Err"))
+def yh_fit(row: SSObjectRow) -> str:
+    yH, yG12, yHErr, yG12err,yH_yG12_cov,yChi2  = band_fitter('y',row,row.ssobjectid)
+    return f"{yG12Err}"
+
+@SSObject.register(ColumnName("uH_uG12_cov"))
+def uh_fit(row: SSObjectRow) -> str:
+    uH, uG12, uHErr, uG12err,uH_uG12_cov,uChi2  = band_fitter('u',row,row.ssobjectid)
+    return f"{uH_uG12_cov}"
+@SSObject.register(ColumnName("gH_gG12_cov"))
+def gh_fit(row: SSObjectRow) -> str:
+    gH, gG12, gHErr, gG12err,gH_gG12_cov,gChi2  = band_fitter('g',row,row.ssobjectid)
+    return f"{gH_gG12_cov}"
+@SSObject.register(ColumnName("rH_rG12_cov"))
+def rh_fit(row: SSObjectRow) -> str:
+    rH, rG12, rHErr, rG12err,rH_rG12_cov,rChi2  = band_fitter('r',row,row.ssobjectid)
+    return f"{rH_rG12_cov}"
+@SSObject.register(ColumnName("iH_iG12_cov"))
+def ih_fit(row: SSObjectRow) -> str:
+    iH, iG12, iHErr, iG12err,iH_iG12_cov,iChi2  = band_fitter('i',row,row.ssobjectid)
+    return f"{iH_iG12_cov}"
+@SSObject.register(ColumnName("zH_zG12_cov"))
+def zh_fit(row: SSObjectRow) -> str:
+    zH, zG12, zHErr, zG12err,zH_zG12_cov,zChi2  = band_fitter('z',row,row.ssobjectid)
+    return f"{zH_zG12_cov}"
+@SSObject.register(ColumnName("yH_yG12_cov"))
+def yh_fit(row: SSObjectRow) -> str:
+    yH, yG12, yHErr, yG12err,yH_yG12_cov,yChi2  = band_fitter('y',row,row.ssobjectid)
+    return f"{yH_yG12_cov}"
+
+@SSObject.register(ColumnName("uChi2"))
+def uh_fit(row: SSObjectRow) -> str:
+    uH, uG12, uHErr, uG12err,uH_uG12_cov,uChi2  = band_fitter('u',row,row.ssobjectid)
+    return f"{uChi2}"
+@SSObject.register(ColumnName("gChi2"))
+def gh_fit(row: SSObjectRow) -> str:
+    gH, gG12, gHErr, gG12err,gH_gG12_cov,gChi2  = band_fitter('g',row,row.ssobjectid)
+    return f"{gChi2}"
+@SSObject.register(ColumnName("rChi2"))
+def rh_fit(row: SSObjectRow) -> str:
+    rH, rG12, rHErr, rG12err,rH_rG12_cov,rChi2  = band_fitter('r',row,row.ssobjectid)
+    return f"{rChi2}"
+@SSObject.register(ColumnName("iChi2"))
+def ih_fit(row: SSObjectRow) -> str:
+    iH, iG12, iHErr, iG12err,iH_iG12_cov,iChi2  = band_fitter('i',row,row.ssobjectid)
+    return f"{iChi2}"
+@SSObject.register(ColumnName("zChi2"))
+def zh_fit(row: SSObjectRow) -> str:
+    zH, zG12, zHErr, zG12err,zH_zG12_cov,zChi2  = band_fitter('z',row,row.ssobjectid)
+    return f"{zChi2}"
+@SSObject.register(ColumnName("yChi2"))
+def yh_fit(row: SSObjectRow) -> str:
+    yH, yG12, yHErr, yG12err,yH_yG12_cov,yChi2  = band_fitter('y',row,row.ssobjectid)
+    return f"{yChi2}"
+
 @lru_cache(maxsize=1000)
-def band_fitter(band:str,row:SSObjectRow) -> Tuple[float,float,float,float]:
+@cached(cache={}, key=lambda band, row, oid: hashkey(oid))
+def band_fitter(band:str,row:SSObjectRow,oid:str) -> Tuple[float,float,float,float]:
     mag_list = np.array([d['mag'] for d in row.dia_list if d['Filter'] == band])
     a = np.array([d['phaseAngle'] for d in row.dia_list if d['Filter'] == band]) * DEG2RAD
     weights = np.array([(1/(d['magSigma']))**2 for d in row.dia_list if d['Filter'] == band])
