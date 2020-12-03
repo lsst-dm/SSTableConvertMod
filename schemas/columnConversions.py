@@ -122,7 +122,7 @@ def build_mid_point_time(row: Mapping) -> str:
 def build_dia_filter(row: Mapping) -> str:
     return row["Filter"]
 
-@DIASource.register(ColumnName("phaseAngle")):
+@DIASource.register(ColumnName("phaseAngle"))
 def build_dia_phase(row: Mapping) -> str:
     return row['Sun-Ast-Obs(deg)']
 
