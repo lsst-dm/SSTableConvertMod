@@ -308,27 +308,27 @@ def yh_fit(row: SSObjectRow) -> str:
     yH, yG12, yHErr, yG12err,yH_yG12_cov,yChi2  = band_fitter('y',row,row.ssobjectid)
     return f"{yG12Err}"
 
-@SSObject.register(ColumnName("uH_uG12_cov"))
+@SSObject.register(ColumnName("uH_uG12_Cov"))
 def uh_fit(row: SSObjectRow) -> str:
     uH, uG12, uHErr, uG12err,uH_uG12_cov,uChi2  = band_fitter('u',row,row.ssobjectid)
     return f"{uH_uG12_cov}"
-@SSObject.register(ColumnName("gH_gG12_cov"))
+@SSObject.register(ColumnName("gH_gG12_Cov"))
 def gh_fit(row: SSObjectRow) -> str:
     gH, gG12, gHErr, gG12err,gH_gG12_cov,gChi2  = band_fitter('g',row,row.ssobjectid)
     return f"{gH_gG12_cov}"
-@SSObject.register(ColumnName("rH_rG12_cov"))
+@SSObject.register(ColumnName("rH_rG12_Cov"))
 def rh_fit(row: SSObjectRow) -> str:
     rH, rG12, rHErr, rG12err,rH_rG12_cov,rChi2  = band_fitter('r',row,row.ssobjectid)
     return f"{rH_rG12_cov}"
-@SSObject.register(ColumnName("iH_iG12_cov"))
+@SSObject.register(ColumnName("iH_iG12_Cov"))
 def ih_fit(row: SSObjectRow) -> str:
     iH, iG12, iHErr, iG12err,iH_iG12_cov,iChi2  = band_fitter('i',row,row.ssobjectid)
     return f"{iH_iG12_cov}"
-@SSObject.register(ColumnName("zH_zG12_cov"))
+@SSObject.register(ColumnName("zH_zG12_Cov"))
 def zh_fit(row: SSObjectRow) -> str:
     zH, zG12, zHErr, zG12err,zH_zG12_cov,zChi2  = band_fitter('z',row,row.ssobjectid)
     return f"{zH_zG12_cov}"
-@SSObject.register(ColumnName("yH_yG12_cov"))
+@SSObject.register(ColumnName("yH_yG12_Cov"))
 def yh_fit(row: SSObjectRow) -> str:
     yH, yG12, yHErr, yG12err,yH_yG12_cov,yChi2  = band_fitter('y',row,row.ssobjectid)
     return f"{yH_yG12_cov}"
