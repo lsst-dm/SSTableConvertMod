@@ -209,7 +209,8 @@ class FileTableBuilder(ABC):
             writer.writerow(self.parent.schema.fields.keys())
             with mmap(in_file.fileno(), 0, prot=PROT_READ) as mm_in:
                 def helper(fp):
-                    yield fp.readline().rstrip()
+                    for line in fp.readline():
+                        yield line.rstrip()
                 # rows_generator = iter(mm_in.readline, b"")
                 rows_generator = helper(mm_in)
                 rows = self._make_rows(rows_generator, self.columns,
