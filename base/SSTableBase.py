@@ -208,7 +208,10 @@ class FileTableBuilder(ABC):
                                 lineterminator="\n")
             writer.writerow(self.parent.schema.fields.keys())
             with mmap(in_file.fileno(), 0, prot=PROT_READ) as mm_in:
-                rows_generator = iter(mm_in.readline, b"")
+                def helper(fp):
+                    yield fp.readline().rstrip()
+                # rows_generator = iter(mm_in.readline, b"")
+                rows_generator = helper(mm_in)
                 rows = self._make_rows(rows_generator, self.columns,
                                        self.skip_rows,
                                        self.stop_after)
@@ -331,7 +334,7 @@ class FileTable(ABC):
 
     def __iter__(self):
         self._seek(0)
-        generator = (row.decode().split(',')
+        generator = (row.decode().rstrip().split(',')
                      for row in iter(self._mmap.readline, b""))
         # always skip the first row
         next(generator)
