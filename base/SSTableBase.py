@@ -204,12 +204,12 @@ class FileTableBuilder(ABC):
                           )
         with open(self.input_filename, "rb") as in_file,\
                 open(self.output_filename, 'w+', newline='') as out_file:
-            writer = csv.writer(out_file, #quoting=csv.QUOTE_NONE,
+            writer = csv.writer(out_file, quoting=csv.QUOTE_NONE,
                                 lineterminator="\n")
             writer.writerow(self.parent.schema.fields.keys())
             with mmap(in_file.fileno(), 0, prot=PROT_READ) as mm_in:
                 def helper(fp):
-                    for line in fp:
+                    for line in iter(fp.readline, b""):
                         yield line.rstrip()
                 # rows_generator = iter(mm_in.readline, b"")
                 rows_generator = helper(mm_in)
