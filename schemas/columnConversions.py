@@ -203,7 +203,7 @@ def calculate_arc(row: SSObjectRow) -> str:
 # 5) How do you find the Ndata column?
 @SSObject.register(ColumnName("uH"))
 def uh_fit(row: SSObjectRow) -> str:
-    uH, uG12, uHErr, uG12err,uH_uG12_cov,uChi2  = band_fitter('u',row,row.ssobjectid) #change
+    uH, uG12, uHErr, uG12err,uH_uG12_cov,uChi2  = band_fitter('u',row.dia_list,row.ssobjectid) #change
     return f"{uH}"
 @SSObject.register(ColumnName("gH"))
 def gh_fit(row: SSObjectRow) -> str:
@@ -360,7 +360,7 @@ def yh_fit(row: SSObjectRow) -> str:
 
 @lru_cache(maxsize=1000)
 @cached(cache={}, key=lambda band, row, oid: hashkey(oid))
-def band_fitter(band:str,row,oid:str) -> Tuple[float,float,float,float,float,float]:
+def band_fitter(band:str,row:list,oid:str) -> Tuple[float,float,float,float,float,float]:
     mag_list = np.array([d['mag'] for d in row if d['Filter'] == band]) #change
     a = np.array([d['phaseAngle'] for d in row if d['Filter'] == band]) * DEG2RAD #change
     weights = np.array([(1/(d['magSigma']))**2 for d in row if d['Filter'] == band]) #change
