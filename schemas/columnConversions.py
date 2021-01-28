@@ -360,7 +360,7 @@ def yh_fit(row: SSObjectRow) -> str:
 
 @lru_cache(maxsize=1000)
 @cached(cache={}, key=lambda band, row, oid: hashkey(oid))
-def band_fitter(band:str,row:SSObjectRow,oid:str) -> Tuple[float,float,float,float,float,float]:
+def band_fitter(band:str,row,oid:str) -> Tuple[float,float,float,float,float,float]:
     mag_list = np.array([d['mag'] for d in row if d['Filter'] == band]) #change
     a = np.array([d['phaseAngle'] for d in row if d['Filter'] == band]) * DEG2RAD #change
     weights = np.array([(1/(d['magSigma']))**2 for d in row if d['Filter'] == band]) #change
