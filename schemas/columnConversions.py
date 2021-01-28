@@ -203,7 +203,7 @@ def calculate_arc(row: SSObjectRow) -> str:
 # 5) How do you find the Ndata column?
 @SSObject.register(ColumnName("uH"))
 def uh_fit(row: SSObjectRow) -> str:
-    uH, uG12, uHErr, uG12err,uH_uG12_cov,uChi2  = band_fitter('u',row,row.ssobjectid)
+    uH, uG12, uHErr, uG12err,uH_uG12_cov,uChi2  = band_fitter('u',SSObjectRow,row.ssobjectid)
     return f"{uH}"
 @SSObject.register(ColumnName("gH"))
 def gh_fit(row: SSObjectRow) -> str:
