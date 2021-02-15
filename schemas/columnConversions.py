@@ -201,10 +201,17 @@ def calculate_arc(row: SSObjectRow) -> str:
 # 3) How do you return fit_info dictionary? SOLVED SORTA
 # 4) Where do weights come in? 1/mag_sigma^2 SOLVED
 # 5) How do you find the Ndata column?
+band_cache = {}
+def lookup_band_cache(band,row):
+    key = (row.ssobjectid,band)
+    results = band_cache.get(key)
+    if results is None:
+        results = band_fitter(band,row)
+        band_cache[key] = results
+    return results
 @SSObject.register(ColumnName("uH"))
 def uh_fit(row: SSObjectRow) -> str:
-    uH, uG12, uHErr, uG12err,uH_uG12_cov,uChi2  = band_fitter('u',row.dia_list,row.ssobjectid) #change
-    return f"{uH}"
+    return f"{lookup_band_cache('u',row).H}"
 @SSObject.register(ColumnName("gH"))
 def gh_fit(row: SSObjectRow) -> str:
     gH, gG12, gHErr, gG12err,gH_gG12_cov,gChi2  = band_fitter('g',row,row.ssobjectid)
@@ -358,12 +365,22 @@ def yh_fit(row: SSObjectRow) -> str:
     yH, yG12, yHErr, yG12err,yH_yG12_cov,yChi2  = band_fitter('y',row,row.ssobjectid)
     return f"{yChi2}"
 
-@lru_cache(maxsize=1000)
-@cached(cache={}, key=lambda band, row, oid: hashkey(oid))
-def band_fitter(band:str,row:list,oid:str) -> Tuple[float,float,float,float,float,float]:
-    mag_list = np.array([d['mag'] for d in row if d['Filter'] == band]) #change
-    a = np.array([d['phaseAngle'] for d in row if d['Filter'] == band]) * DEG2RAD #change
-    weights = np.array([(1/(d['magSigma']))**2 for d in row if d['Filter'] == band]) #change
+
+from dataclasses import dataclass
+@dataclass
+class BandFitterReturn:
+    H: float
+    G12: float
+    H_err: float
+    G12_err: float
+    H_G12_cov: float
+    chi_2: float
+#@lru_cache(maxsize=1000)
+#@cached(cache={}, key=lambda band, row, oid: hashkey(oid))
+def band_fitter(band:str,row:SSObjectRow) -> BandFitterReturn:
+    mag_list = np.array([d['mag'] for d in row.dia_list if d['Filter'] == band]) #change
+    a = np.array([d['phaseAngle'] for d in row.dia_list if d['Filter'] == band]) * DEG2RAD #change
+    weights = np.array([(1/(d['magSigma']))**2 for d in row.dia_list if d['Filter'] == band]) #change
     obs = Obs.from_dict({'alpha':a,'mag':mag_list,'weights':weights})
     var = HG12.from_obs(obs,fitter,'mag')
     fi=fitter.fit_info
@@ -373,7 +390,7 @@ def band_fitter(band:str,row:list,oid:str) -> Tuple[float,float,float,float,floa
     G12_err = np.sqrt(param_cov[1][1])
     H_G12_cov = param_cov[0][1]
     chi_2 = np.sum(fvec**2 * weights)
-    return (var.H.value,var.G12.value,H_err,G12_err,H_G12_cov,chi_2)
+    return BandFitterReturn(var.H.value,var.G12.value,H_err,G12_err,H_G12_cov,chi_2)
 # ### SSSource ####
 @SSSource.register(ColumnName("eclipticLambda"))
 def make_ecliptic_lamba(row: Mapping):
