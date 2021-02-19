@@ -384,6 +384,7 @@ def band_fitter(band:str,row:SSObjectRow) -> BandFitterReturn:
     print(mag_list)
     print(a)
     print(weights)
+    print(row)
     obs = Obs.from_dict({'alpha':a,'mag':mag_list,'weights':weights})
     var = HG12.from_obs(obs,fitter,'mag')
     fi=fitter.fit_info
