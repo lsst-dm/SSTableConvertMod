@@ -241,127 +241,127 @@ def pass_through_h(row: SSObjectRow) -> str:
     return f"{entry['mpcH']}"
 
 @SSObject.register(ColumnName("uG12"))
-def uh_fit(row: SSObjectRow) -> str:
+def uG12_fit(row: SSObjectRow) -> str:
     uH, uG12, uHErr, uG12err,uH_uG12_cov,uChi2  = band_fitter('u',row,row.ssobjectid)
     return f"{uG12}"
 @SSObject.register(ColumnName("gG12"))
-def gh_fit(row: SSObjectRow) -> str:
+def gG12_fit(row: SSObjectRow) -> str:
     gH, gG12, gHErr, gG12err,gH_gG12_cov,gChi2  = band_fitter('g',row,row.ssobjectid)
     return f"{gG12}"
 @SSObject.register(ColumnName("rG12"))
-def rh_fit(row: SSObjectRow) -> str:
+def rG12_fit(row: SSObjectRow) -> str:
     rH, rG12, rHErr, rG12err,rH_rG12_cov,rChi2  = band_fitter('r',row,row.ssobjectid)
     return f"{rG12}"
 @SSObject.register(ColumnName("iG12"))
-def ih_fit(row: SSObjectRow) -> str:
+def iG12_fit(row: SSObjectRow) -> str:
     iH, iG12, iHErr, iG12err,iH_iG12_cov,iChi2  = band_fitter('i',row,row.ssobjectid)
     return f"{iG12}"
 @SSObject.register(ColumnName("zG12"))
-def zh_fit(row: SSObjectRow) -> str:
+def zG12_fit(row: SSObjectRow) -> str:
     zH, zG12, zHErr, zG12err,zH_zG12_cov,zChi2  = band_fitter('z',row,row.ssobjectid)
     return f"{zG12}"
 @SSObject.register(ColumnName("yG12"))
-def yh_fit(row: SSObjectRow) -> str:
+def yG12_fit(row: SSObjectRow) -> str:
     yH, yG12, yHErr, yG12err,yH_yG12_cov,yChi2  = band_fitter('y',row,row.ssobjectid)
     return f"{yG12}"
 
 @SSObject.register(ColumnName("uHErr"))
-def uh_fit(row: SSObjectRow) -> str:
+def uHErr_fit(row: SSObjectRow) -> str:
     uH, uG12, uHErr, uG12err,uH_uG12_cov,uChi2  = band_fitter('u',row,row.ssobjectid)
     return f"{uHErr}"
 @SSObject.register(ColumnName("gHErr"))
-def gh_fit(row: SSObjectRow) -> str:
+def gHErr_fit(row: SSObjectRow) -> str:
     gH, gG12, gHErr, gG12err,gH_gG12_cov,gChi2  = band_fitter('g',row,row.ssobjectid)
     return f"{gHErr}"
 @SSObject.register(ColumnName("rHErr"))
-def rh_fit(row: SSObjectRow) -> str:
+def rHErr_fit(row: SSObjectRow) -> str:
     rH, rG12, rHErr, rG12err,rH_rG12_cov,rChi2  = band_fitter('r',row,row.ssobjectid)
     return f"{rHErr}"
 @SSObject.register(ColumnName("iHErr"))
-def ih_fit(row: SSObjectRow) -> str:
+def iHErr_fit(row: SSObjectRow) -> str:
     iH, iG12, iHErr, iG12err,iH_iG12_cov,iChi2  = band_fitter('i',row,row.ssobjectid)
     return f"{iHErr}"
 @SSObject.register(ColumnName("zHErr"))
-def zh_fit(row: SSObjectRow) -> str:
+def zHErr_fit(row: SSObjectRow) -> str:
     zH, zG12, zHErr, zG12err,zH_zG12_cov,zChi2  = band_fitter('z',row,row.ssobjectid)
     return f"{zHErr}"
 @SSObject.register(ColumnName("yHErr"))
-def yh_fit(row: SSObjectRow) -> str:
+def yHErr_fit(row: SSObjectRow) -> str:
     yH, yG12, yHErr, yG12err,yH_yG12_cov,yChi2  = band_fitter('y',row,row.ssobjectid)
     return f"{yHErr}"
 
 @SSObject.register(ColumnName("uG12Err"))
-def uh_fit(row: SSObjectRow) -> str:
+def uG12Err_fit(row: SSObjectRow) -> str:
     uH, uG12, uHErr, uG12err,uH_uG12_cov,uChi2  = band_fitter('u',row,row.ssobjectid)
     return f"{uG12Err}"
 @SSObject.register(ColumnName("gG12Err"))
-def gh_fit(row: SSObjectRow) -> str:
+def gG12Err_fit(row: SSObjectRow) -> str:
     gH, gG12, gHErr, gG12err,gH_gG12_cov,gChi2  = band_fitter('g',row,row.ssobjectid)
     return f"{gG12Err}"
 @SSObject.register(ColumnName("rG12Err"))
-def rh_fit(row: SSObjectRow) -> str:
+def rG12Err_fit(row: SSObjectRow) -> str:
     rH, rG12, rHErr, rG12err,rH_rG12_cov,rChi2  = band_fitter('r',row,row.ssobjectid)
     return f"{rG12Err}"
 @SSObject.register(ColumnName("iG12Err"))
-def ih_fit(row: SSObjectRow) -> str:
+def iG12Err_fit(row: SSObjectRow) -> str:
     iH, iG12, iHErr, iG12err,iH_iG12_cov,iChi2  = band_fitter('i',row,row.ssobjectid)
     return f"{iG12Err}"
 @SSObject.register(ColumnName("zG12Err"))
-def zh_fit(row: SSObjectRow) -> str:
+def zG12Err_fit(row: SSObjectRow) -> str:
     zH, zG12, zHErr, zG12err,zH_zG12_cov,zChi2  = band_fitter('z',row,row.ssobjectid)
     return f"{zG12Err}"
 @SSObject.register(ColumnName("yG12Err"))
-def yh_fit(row: SSObjectRow) -> str:
+def yG12Err_fit(row: SSObjectRow) -> str:
     yH, yG12, yHErr, yG12err,yH_yG12_cov,yChi2  = band_fitter('y',row,row.ssobjectid)
     return f"{yG12Err}"
 
 @SSObject.register(ColumnName("uH_uG12_Cov"))
-def uh_fit(row: SSObjectRow) -> str:
+def uH_uG12_Cov_fit(row: SSObjectRow) -> str:
     uH, uG12, uHErr, uG12err,uH_uG12_cov,uChi2  = band_fitter('u',row,row.ssobjectid)
     return f"{uH_uG12_cov}"
 @SSObject.register(ColumnName("gH_gG12_Cov"))
-def gh_fit(row: SSObjectRow) -> str:
+def gH_uG12_Cov_fit(row: SSObjectRow) -> str:
     gH, gG12, gHErr, gG12err,gH_gG12_cov,gChi2  = band_fitter('g',row,row.ssobjectid)
     return f"{gH_gG12_cov}"
 @SSObject.register(ColumnName("rH_rG12_Cov"))
-def rh_fit(row: SSObjectRow) -> str:
+def rH_uG12_Cov_fit(row: SSObjectRow) -> str:
     rH, rG12, rHErr, rG12err,rH_rG12_cov,rChi2  = band_fitter('r',row,row.ssobjectid)
     return f"{rH_rG12_cov}"
 @SSObject.register(ColumnName("iH_iG12_Cov"))
-def ih_fit(row: SSObjectRow) -> str:
+def iH_uG12_Cov_fit(row: SSObjectRow) -> str:
     iH, iG12, iHErr, iG12err,iH_iG12_cov,iChi2  = band_fitter('i',row,row.ssobjectid)
     return f"{iH_iG12_cov}"
 @SSObject.register(ColumnName("zH_zG12_Cov"))
-def zh_fit(row: SSObjectRow) -> str:
+def zH_uG12_Cov_fit(row: SSObjectRow) -> str:
     zH, zG12, zHErr, zG12err,zH_zG12_cov,zChi2  = band_fitter('z',row,row.ssobjectid)
     return f"{zH_zG12_cov}"
 @SSObject.register(ColumnName("yH_yG12_Cov"))
-def yh_fit(row: SSObjectRow) -> str:
+def yH_uG12_Cov_fit(row: SSObjectRow) -> str:
     yH, yG12, yHErr, yG12err,yH_yG12_cov,yChi2  = band_fitter('y',row,row.ssobjectid)
     return f"{yH_yG12_cov}"
 
 @SSObject.register(ColumnName("uChi2"))
-def uh_fit(row: SSObjectRow) -> str:
+def uChi2_fit(row: SSObjectRow) -> str:
     uH, uG12, uHErr, uG12err,uH_uG12_cov,uChi2  = band_fitter('u',row,row.ssobjectid)
     return f"{uChi2}"
 @SSObject.register(ColumnName("gChi2"))
-def gh_fit(row: SSObjectRow) -> str:
+def gChi2_fit(row: SSObjectRow) -> str:
     gH, gG12, gHErr, gG12err,gH_gG12_cov,gChi2  = band_fitter('g',row,row.ssobjectid)
     return f"{gChi2}"
 @SSObject.register(ColumnName("rChi2"))
-def rh_fit(row: SSObjectRow) -> str:
+def rChi2_fit(row: SSObjectRow) -> str:
     rH, rG12, rHErr, rG12err,rH_rG12_cov,rChi2  = band_fitter('r',row,row.ssobjectid)
     return f"{rChi2}"
 @SSObject.register(ColumnName("iChi2"))
-def ih_fit(row: SSObjectRow) -> str:
+def iChi2_fit(row: SSObjectRow) -> str:
     iH, iG12, iHErr, iG12err,iH_iG12_cov,iChi2  = band_fitter('i',row,row.ssobjectid)
     return f"{iChi2}"
 @SSObject.register(ColumnName("zChi2"))
-def zh_fit(row: SSObjectRow) -> str:
+def zChi2_fit(row: SSObjectRow) -> str:
     zH, zG12, zHErr, zG12err,zH_zG12_cov,zChi2  = band_fitter('z',row,row.ssobjectid)
     return f"{zChi2}"
 @SSObject.register(ColumnName("yChi2"))
-def yh_fit(row: SSObjectRow) -> str:
+def yChi2_fit(row: SSObjectRow) -> str:
     yH, yG12, yHErr, yG12err,yH_yG12_cov,yChi2  = band_fitter('y',row,row.ssobjectid)
     return f"{yChi2}"
 
