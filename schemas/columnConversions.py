@@ -242,8 +242,7 @@ def pass_through_h(row: SSObjectRow) -> str:
 
 @SSObject.register(ColumnName("uG12"))
 def uG12_fit(row: SSObjectRow) -> str:
-    uH, uG12, uHErr, uG12err,uH_uG12_cov,uChi2  = band_fitter('u',row,row.ssobjectid)
-    return f"{uG12}"
+    return f"{lookup_band_cache('u',row).G12}"
 @SSObject.register(ColumnName("gG12"))
 def gG12_fit(row: SSObjectRow) -> str:
     gH, gG12, gHErr, gG12err,gH_gG12_cov,gChi2  = band_fitter('g',row,row.ssobjectid)
