@@ -201,7 +201,7 @@ def calculate_arc(row: SSObjectRow) -> str:
 # 3) How do you return fit_info dictionary? SOLVED SORTA
 # 4) Where do weights come in? 1/mag_sigma^2 SOLVED
 # 5) How do you find the Ndata column?
-band_cache = {} # needs a limit on size
+band_cache = dict() # needs a limit on size
 def lookup_band_cache(band,row):
     key = (row.ssobjectid,band)
     results = band_cache.get(key)
