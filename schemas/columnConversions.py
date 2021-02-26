@@ -204,12 +204,12 @@ def calculate_arc(row: SSObjectRow) -> str:
 band_cache = dict() # needs a limit on size
 def lookup_band_cache(band,row):
     key = (row.ssobjectid,band)
-    results = band_cache.get(key)
-    if results is None:
+    #results = band_cache.get(key)
+    if key not in band_cache:
         results = band_fitter(band,row)
         band_cache = {}
         band_cache[key] = results
-    return results
+    return band_cache[key]
 @SSObject.register(ColumnName("uH"))
 def uh_fit(row: SSObjectRow) -> str:
     return f"{lookup_band_cache('u',row).H}"
