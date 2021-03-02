@@ -363,10 +363,18 @@ def band_fitter(band:str,row:SSObjectRow) -> BandFitterReturn:
     print(fi)
     param_cov = fi['param_cov']
     fvec = fi['fvec']
-    H_err = np.sqrt(param_cov[0][0])
-    G12_err = np.sqrt(param_cov[1][1])
-    H_G12_cov = param_cov[0][1]
-    chi_2 = np.sum(fvec**2 * weights)
+    if param_cov == None:
+        H_err = -999.0
+        G12_err = -999.0
+        H_G12_cov = -999.0
+    else:
+        H_err = np.sqrt(param_cov[0][0])
+        G12_err = np.sqrt(param_cov[1][1])
+        H_G12_cov = param_cov[0][1]
+    if fvec == None:
+        chi_2 = -999.0
+    else:
+        chi_2 = np.sum(fvec**2 * weights)
     return BandFitterReturn(var.H.value,var.G12.value,H_err,G12_err,H_G12_cov,chi_2)
 # ### SSSource ####
 @SSSource.register(ColumnName("eclipticLambda"))
