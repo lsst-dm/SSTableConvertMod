@@ -351,12 +351,12 @@ def band_fitter(band:str,row:SSObjectRow) -> BandFitterReturn:
     # 'mag' -> 'filter'
     # 'filter' -> 'phaseAngle'
     # 'phaseAngle' -> 'mag'
-    mag_list = np.array([d['phaseAngle'] for d in row.dia_list if d['mag'] == band])
+    mag_list = np.array([float(d['phaseAngle']) for d in row.dia_list if d['mag'] == band])
     if mag_list.size < 2:
         #print(mag_list.size)
         return BandFitterReturn(-999,-999,-999,-999,-999,-999)
-    a = np.array([d['filter'] for d in row.dia_list if d['mag'] == band]) * DEG2RAD #change
-    weights = np.array([(1/(d['magSigma']))**2 for d in row.dia_list if d['mag'] == band]) #change
+    a = np.array([float(d['filter']) for d in row.dia_list if d['mag'] == band]) * DEG2RAD #change
+    weights = np.array([(1/(float(d['magSigma'])))**2 for d in row.dia_list if d['mag'] == band]) #change
     obs = Obs.from_dict({'alpha':a,'mag':mag_list,'weights':weights})
     var = HG12.from_obs(obs,fitter,'mag')
     fi=fitter.fit_info
