@@ -347,7 +347,7 @@ class BandFitterReturn:
 def band_fitter(band:str,row:SSObjectRow) -> BandFitterReturn:
     mag_list = np.array([d['mag'] for d in row.dia_list if d['filter'] == band]) #change
     if mag_list.size < 2:
-        print(mag_list.size)
+        #print(mag_list.size)
         return BandFitterReturn(-999,-999,-999,-999,-999,-999)
     a = np.array([d['phaseAngle'] for d in row.dia_list if d['filter'] == band]) * DEG2RAD #change
     weights = np.array([(1/(d['magSigma']))**2 for d in row.dia_list if d['filter'] == band]) #change
