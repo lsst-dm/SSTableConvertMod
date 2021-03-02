@@ -52,5 +52,5 @@ class DiaSourceBuilder(FileTableBuilder):
 
 class DiaSourceFileTable(FileTable):
     schema = DIASource
-    index_columns = tuple(ColumnName(x) for x in ("ssObjectId", "midPointTai",'filter',"mag","phaseAngle","magSigma"))
+    index_columns = tuple(ColumnName(x) for x in ("ssObjectId", "midPointTai","mag","filter","phaseAngle","magSigma"))
     builder = DiaSourceBuilder
