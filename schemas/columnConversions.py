@@ -360,10 +360,10 @@ def band_fitter(band:str,row:SSObjectRow) -> BandFitterReturn:
     obs = Obs.from_dict({'alpha':a,'mag':mag_list,'weights':weights})
     var = HG12.from_obs(obs,fitter,'mag')
     fi=fitter.fit_info
-    print(fi)
+    #print(fi)
     param_cov = fi['param_cov']
     fvec = fi['fvec']
-    if param_cov == None:
+    if type(param_cov) == type(None):
         H_err = -999.0
         G12_err = -999.0
         H_G12_cov = -999.0
@@ -371,7 +371,7 @@ def band_fitter(band:str,row:SSObjectRow) -> BandFitterReturn:
         H_err = np.sqrt(param_cov[0][0])
         G12_err = np.sqrt(param_cov[1][1])
         H_G12_cov = param_cov[0][1]
-    if fvec == None:
+    if type(fvec) == type(None):
         chi_2 = -999.0
     else:
         chi_2 = np.sum(fvec**2 * weights)
