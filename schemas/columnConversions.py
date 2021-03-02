@@ -203,6 +203,7 @@ def calculate_arc(row: SSObjectRow) -> str:
 # 5) How do you find the Ndata column?
 band_cache = dict() # needs a limit on size
 def lookup_band_cache(band,row):
+    global band_cache #hopefully this works
     key = (row.ssobjectid,band)
     #results = band_cache.get(key)
     if key not in band_cache:
