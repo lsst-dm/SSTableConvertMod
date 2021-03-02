@@ -345,6 +345,7 @@ class BandFitterReturn:
 #@lru_cache(maxsize=1000)
 #@cached(cache={}, key=lambda band, row, oid: hashkey(oid))
 def band_fitter(band:str,row:SSObjectRow) -> BandFitterReturn:
+    print(row.dia_list)
     mag_list = np.array([d['mag'] for d in row.dia_list if d['filter'] == band]) #change
     if mag_list.size < 2:
         #print(mag_list.size)
