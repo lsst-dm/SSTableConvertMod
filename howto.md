@@ -1,5 +1,5 @@
 # HOWTO: SSTableConvertMod
----
+
 *As of 3/20/2021*
 
 ## Installation
@@ -18,9 +18,9 @@ Make sure you have the following dependencies also installed,
 - cachetools
 - *and many more ...*
 
-## Set-Up
+#### Note,
 
-You may want to add and "outputs" folder to your workspace to simplify things. Make sure this is **right outside** of the github repo folder.
+You may want to add an "outputs" folder to your workspace to simplify things. Make sure this is **right outside** of the github repo folder.
 
 ## Running things
 
@@ -36,7 +36,7 @@ First in a terminal run the server call,
 python -m SSTableConvertMod cli-server [name for dia index file].sql
 ```
 
-In a **separate** terminal run the `dia` call,
+In a **separate terminal** run the `dia` call,
 
 ```
 python -m SSTableConvertMod dia --skip_rows=1 [input_dia_file_name] [output_dia_filename].csv
@@ -68,7 +68,7 @@ This should work for right now, **but this may be changed in the future.**
 
 ### 4. SSSource
 
-Just run this for an input simulation file i.e. `/epyc/projects/jpl_survey_sim/s3c/S0.dat.csv` thus,
+Just run this for an input simulation file, example: `/epyc/projects/jpl_survey_sim/s3c/S0.dat.csv` thus calling the function,
 
 ```
 python -m SSTableConvertMod sssource --skip_rows=1 [input_simulation_file] [output_sssource_file].csv
