@@ -206,6 +206,7 @@ def lookup_band_cache(band,row):
     #if row.ssobjectid == '1108132049631328328':
     #    print('Found!')
     #    print(row.dia_list)
+    print(row.mpc_entry)
     global band_cache #hopefully this works
     key = (row.ssobjectid,band)
     #results = band_cache.get(key)
