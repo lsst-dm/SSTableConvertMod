@@ -73,7 +73,7 @@ class JointIndex:
                          zip(self.mpc_schema, next(mpc_row))}
         except Exception as e:
             import traceback
-            traceback.print_stack()
+            traceback.print_exc()
             mpc_entry = NoIndexError
         return SSObjectRow(key, dia_list, mpc_entry)
 
