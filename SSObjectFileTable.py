@@ -36,11 +36,11 @@ class JointIndex:
     def __init__(self, dia_sidecar: str, mpc_sidecar: str):
         self.dia_db = sqlite3.connect(dia_sidecar)
         self.dia_cursor = self.dia_db.cursor()
-        self.dia_cursor.execute("select * from ind limit 1")
+        self.dia_cursor.execute("select * from ind limit 1") #<- this shit right here
         self.dia_schema = [description[0] for description in
                            self.dia_cursor.description]
 
-        self.mpc_db = sqlite3.connect(mpc_sidecar)
+        self.mpc_db = sqlite3.connect(mpc_sidecar) #<- this shit right here
         self.mpc_cursor = self.mpc_db.cursor()
         self.mpc_cursor.execute("select * from ind limit 1")
         self.mpc_schema = [description[0] for description in
@@ -71,7 +71,8 @@ class JointIndex:
         try:
             mpc_entry = {k: v for k, v in
                          zip(self.mpc_schema, next(mpc_row))}
-        except Exception:
+        except Exception as e:
+            print(e)
             mpc_entry = NoIndexError
         return SSObjectRow(key, dia_list, mpc_entry)
 
