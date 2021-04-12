@@ -60,7 +60,9 @@ class JointIndex:
               f"{self.count/(time.time() - self.start)}", end='\r')
         self.count += 1
         dia_list = []
+        print(key)
         key = key[2:-3]
+        print(key)
         for entry in self.dia_db.execute('select * from ind where '
                                          'ssObjectId = ?', (key,)):
             dia_list.append({k: v for k, v in
