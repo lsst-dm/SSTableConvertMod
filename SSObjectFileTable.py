@@ -60,9 +60,7 @@ class JointIndex:
               f"{self.count/(time.time() - self.start)}", end='\r')
         self.count += 1
         dia_list = []
-        print(key)
         key = key[2:-3]
-        print(key)
         for entry in self.dia_db.execute('select * from ind where '
                                          'ssObjectId = ?', (key,)):
             dia_list.append({k: v for k, v in
@@ -74,8 +72,6 @@ class JointIndex:
             mpc_entry = {k: v for k, v in
                          zip(self.mpc_schema, next(mpc_row))}
         except Exception as e:
-            import traceback
-            traceback.print_exc()
             mpc_entry = NoIndexError
         return SSObjectRow(key, dia_list, mpc_entry)
 

@@ -69,5 +69,5 @@ class MPCORBBuilder(FileTableBuilder):
 
 class MPCORBFileTable(FileTable):
     schema = MPCORB
-    index_columns = tuple(ColumnName(x) for x in ("ssObjectId", "mpcH"))
+    index_columns = tuple(ColumnName(x) for x in ("ssObjectId", "mpcH","epoch","tPeri","peri","node","incl","e","q"))
     builder = MPCORBBuilder
