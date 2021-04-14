@@ -16,7 +16,7 @@ from sbpy.data import Obs
 from sbpy.photometry import HG12
 from astropy.modeling.fitting import LevMarLSQFitter
 fitter = LevMarLSQFitter()
-from pymoid.pymoid import moid
+from ...pymoid.pymoid import moid
 from astroquery.jplhorizons import Horizons
 
 from .DiaSourceSchema import DIASource
