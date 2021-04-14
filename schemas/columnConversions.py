@@ -16,6 +16,8 @@ from sbpy.data import Obs
 from sbpy.photometry import HG12
 from astropy.modeling.fitting import LevMarLSQFitter
 fitter = LevMarLSQFitter()
+from /epyc/projects/lsst-sso-sims/pymoid.pymoid import moid
+from astroquery.jplhorizons import Horizons
 
 from .DiaSourceSchema import DIASource
 from .MPCORBSchema import MPCORB
@@ -195,6 +197,41 @@ def calculate_arc(row: SSObjectRow) -> str:
     sort_dates = sorted(float(x) for x in midPointTai_list)
     return f"{sort_dates[-1] - sort_dates[0]}"
 
+moid_cache = dict()
+def lookup_moid_cache(oid,mpc):
+    global moid_cache
+    key = oid
+    if key not in moid_cache:
+        results = moid_comp(mpc)
+        moid_cache = {}
+        moid_cache[key] = results
+    return moid_cache[key]
+
+from dataclasses import dataclass
+@dataclass
+class MoidCompReturn:
+    MOID: float
+    v1: float
+    v2: float
+
+def moid_comp(mpc):
+    earth = Horizons(id='399',location='500@10',epochs=float(mpc['epoch']),id_type='majorbody').elements()
+    ea = [float(earth['a']),float(earth['e']),float(earth['incl']),float(earth['w']),float(earth['Omega'])]
+    q = float(mpc['q'])
+    e = float(mpc['e'])
+    a = q/(1-e)
+    ast = [a,e,float(mpc['incl']),float(mpc['peri']),float(mpc['node'])]
+    MOID,v1,v2 = moid(ea,ast)
+    return MoidCompReturn(MOID,v1,v2)
+
+@SSObject.register(ColumnName("MOID"))
+def MOIDcol(row: SSObjectRow) -> str:
+    return f"{lookup_moid_cache(row.ssobjectid,row.mpc_entry).MOID}"
+
+@SSObject.register(ColumnName("MOIDTrueAnomaly"))
+def MOIDTrueAnomaly(row: SSObjectRow) -> str:
+    return f"{lookup_moid_cache(row.ssobjectid,row.mpc_entry).v2}"
+
 # Questions,
 # 1) How do you determine which band is being fit? SOLVED
 # 2) How do you obtain a list of phase angles for one object? SOLVED
@@ -206,7 +243,7 @@ def lookup_band_cache(band,row):
     #if row.ssobjectid == '1108132049631328328':
     #    print('Found!')
     #    print(row.dia_list)
-    print(row.mpc_entry)
+    #print(row.mpc_entry)
     global band_cache #hopefully this works
     key = (row.ssobjectid,band)
     #results = band_cache.get(key)
@@ -337,7 +374,7 @@ def yChi2_fit(row: SSObjectRow) -> str:
     return f"{lookup_band_cache('y',row).chi_2}"
 
 
-from dataclasses import dataclass
+
 @dataclass
 class BandFitterReturn:
     H: float
