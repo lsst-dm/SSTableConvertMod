@@ -216,6 +216,7 @@ class MoidCompReturn:
     MOID: float
     v1: float
     v2: float
+    DeltaV: float
 
 def moid_comp(mpc):
     #earth = Horizons(id='399',location='500@10',epochs=float(mpc['epoch']),id_type='majorbody').elements()
@@ -234,7 +235,13 @@ def moid_comp(mpc):
     a = q/(1-e)
     ast = [a,e,float(mpc['incl']),float(mpc['peri']),float(mpc['node'])]
     MOID,v1,v2 = moid(ea,ast)
-    return MoidCompReturn(MOID,v1,v2)
+    # QUICK FIX FOR DELTA V, OEPIK'S ESTIMATE
+    gk = 0.01720209895 # gravitational constant
+    spd = 86400 # [s] seconds per mean solar day [D]
+    vtarget=(gk*KM_TO_AU**(-1))/spd
+    u2=3.0-1.0/a-2.0*np.sqrt(a*(1.0-e*e))*math.cos(float(mpc['incl'])*DEG2RAD)
+    u=np.where(u2>0,np.sqrt(u2),0)*vtarget
+    return MoidCompReturn(MOID,v1,v2,u)
 
 @SSObject.register(ColumnName("MOID"))
 def MOIDcol(row: SSObjectRow) -> str:
@@ -243,6 +250,10 @@ def MOIDcol(row: SSObjectRow) -> str:
 @SSObject.register(ColumnName("MOIDTrueAnomaly"))
 def MOIDTrueAnomaly(row: SSObjectRow) -> str:
     return f"{lookup_moid_cache(row.ssobjectid,row.mpc_entry).v2}"
+
+@SSObject.register(ColumnName("MOIDDeltaV"))
+def MOIDDeltaV(row: SSObjectRow) -> str:
+    return f"{lookup_moid_cache(row.ssobjectid,row.mpc_entry).DeltaV}"
 
 # Questions,
 # 1) How do you determine which band is being fit? SOLVED
