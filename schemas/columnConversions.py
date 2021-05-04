@@ -17,7 +17,10 @@ from sbpy.photometry import HG12
 from astropy.modeling.fitting import LevMarLSQFitter
 fitter = LevMarLSQFitter()
 from ..pymoid.pymoid import moid
-from astroquery.jplhorizons import Horizons
+import spiceypy as sp
+sp.furnsh('/epyc/projects/thor/thor/thor/data/de430.bsp')
+sp.furnsh('/epyc/projects/thor/thor/thor/data/latest_leapseconds.tls')
+#from astroquery.jplhorizons import Horizons
 
 from .DiaSourceSchema import DIASource
 from .MPCORBSchema import MPCORB
@@ -215,8 +218,17 @@ class MoidCompReturn:
     v2: float
 
 def moid_comp(mpc):
-    earth = Horizons(id='399',location='500@10',epochs=float(mpc['epoch']),id_type='majorbody').elements()
-    ea = [float(earth['a']),float(earth['e']),float(earth['incl']),float(earth['w']),float(earth['Omega'])]
+    #earth = Horizons(id='399',location='500@10',epochs=float(mpc['epoch']),id_type='majorbody').elements()
+    #ea = [float(earth['a']),float(earth['e']),float(earth['incl']),float(earth['w']),float(earth['Omega'])]
+    et = sp.unitim(float(mpc['epoch'])+2400000.5,"JDTDB",'ET')
+    states=sp.spkez(399,et,"ECLIPJ2000",'NONE',10)
+    pos = states[0][:3]*KM_TO_AU
+    vel = states[0][3:8]*KM_PER_SECOND_TO_AU_PER_DAY
+    osc=sp.oscelt(np.append(pos,vel),0,0.295912208285591100e-3)
+    qa = osc[0]
+    ee = osc[1]
+    ae = qa/(1-ee)
+    ea = [ae,ee,osc[2]*RAD2DEG,osc[4]*RAD2DEG,osc[3]*RAD2DEG]
     q = float(mpc['q'])
     e = float(mpc['e'])
     a = q/(1-e)
@@ -237,7 +249,7 @@ def MOIDTrueAnomaly(row: SSObjectRow) -> str:
 # 2) How do you obtain a list of phase angles for one object? SOLVED
 # 3) How do you return fit_info dictionary? SOLVED SORTA
 # 4) Where do weights come in? 1/mag_sigma^2 SOLVED
-# 5) How do you find the Ndata column?
+# 5) How do you find the Ndata column? SOLVED KINDA
 band_cache = dict() # needs a limit on size
 def lookup_band_cache(band,row):
     #if row.ssobjectid == '1108132049631328328':
@@ -373,7 +385,24 @@ def zChi2_fit(row: SSObjectRow) -> str:
 def yChi2_fit(row: SSObjectRow) -> str:
     return f"{lookup_band_cache('y',row).chi_2}"
 
-
+@SSObject.register(ColumnName("uNdata"))
+def uNdata(row: SSObjectRow) -> str:
+    return f"{lookup_band_cache('u',row).N}"
+@SSObject.register(ColumnName("gNdata"))
+def gNdata(row: SSObjectRow) -> str:
+    return f"{lookup_band_cache('g',row).N}"
+@SSObject.register(ColumnName("rNdata"))
+def rNdata(row: SSObjectRow) -> str:
+    return f"{lookup_band_cache('r',row).N}"
+@SSObject.register(ColumnName("iNdata"))
+def iNdata(row: SSObjectRow) -> str:
+    return f"{lookup_band_cache('i',row).N}"
+@SSObject.register(ColumnName("zNdata"))
+def zNdata(row: SSObjectRow) -> str:
+    return f"{lookup_band_cache('z',row).N}"
+@SSObject.register(ColumnName("yNdata"))
+def yNdata(row: SSObjectRow) -> str:
+    return f"{lookup_band_cache('y',row).N}"
 
 @dataclass
 class BandFitterReturn:
@@ -383,6 +412,8 @@ class BandFitterReturn:
     G12_err: float
     H_G12_cov: float
     chi_2: float
+    N: float
+    flag: bool
 #@lru_cache(maxsize=1000)
 #@cached(cache={}, key=lambda band, row, oid: hashkey(oid))
 def band_fitter(band:str,row:SSObjectRow) -> BandFitterReturn:
@@ -392,10 +423,11 @@ def band_fitter(band:str,row:SSObjectRow) -> BandFitterReturn:
     # 'mag' -> 'filter'
     # 'filter' -> 'phaseAngle'
     # 'phaseAngle' -> 'mag'
+    flag = False
     mag_list = np.array([float(d['phaseAngle']) for d in row.dia_list if d['mag'] == band])
     if mag_list.size < 2:
         #print(mag_list.size)
-        return BandFitterReturn(-999,-999,-999,-999,-999,-999)
+        return BandFitterReturn(-999.0,-999.0,-999.0,-999.0,-999.0,-999.0,mag_list.size,True)
     a = np.array([float(d['filter']) for d in row.dia_list if d['mag'] == band]) * DEG2RAD #change
     weights = np.array([(1/(float(d['magSigma'])))**2 for d in row.dia_list if d['mag'] == band]) #change
     obs = Obs.from_dict({'alpha':a,'mag':mag_list,'weights':weights})
@@ -408,15 +440,17 @@ def band_fitter(band:str,row:SSObjectRow) -> BandFitterReturn:
         H_err = -999.0
         G12_err = -999.0
         H_G12_cov = -999.0
+        flag = True
     else:
         H_err = np.sqrt(param_cov[0][0])
         G12_err = np.sqrt(param_cov[1][1])
         H_G12_cov = param_cov[0][1]
     if type(fvec) == type(None):
         chi_2 = -999.0
+        flag = True
     else:
         chi_2 = np.sum(fvec**2 * weights)
-    return BandFitterReturn(var.H.value,var.G12.value,H_err,G12_err,H_G12_cov,chi_2)
+    return BandFitterReturn(var.H.value,var.G12.value,H_err,G12_err,H_G12_cov,chi_2,mag_list.size,flag)
 # ### SSSource ####
 @SSSource.register(ColumnName("eclipticLambda"))
 def make_ecliptic_lamba(row: Mapping):
