@@ -16,7 +16,11 @@ Make sure you have the following dependencies also installed,
 - sbpy
 - click
 - cachetools
+- pyzmq
 - *and many more ...*
+
+You'll also need:
+- `conda install lsstdesc.coord` or `pip install LSSTDESC.Coord`
 
 #### Note,
 
