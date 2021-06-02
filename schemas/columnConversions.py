@@ -18,8 +18,8 @@ from astropy.modeling.fitting import LevMarLSQFitter
 fitter = LevMarLSQFitter()
 from ..pymoid.pymoid import moid
 import spiceypy as sp
-sp.furnsh('/epyc/projects/thor/thor/thor/data/de430.bsp')
-sp.furnsh('/epyc/projects/thor/thor/thor/data/latest_leapseconds.tls')
+sp.furnsh('/epyc/projects/jpl_survey_sim/survey_sim/kernels/de430.bsp') # /epyc/projects/thor/thor/thor/data/de430.bsp
+sp.furnsh('/epyc/projects/jpl_survey_sim/survey_sim/kernels/latest_leapseconds.tls')
 #from astroquery.jplhorizons import Horizons
 
 from .DiaSourceSchema import DIASource
@@ -27,6 +27,7 @@ from .MPCORBSchema import MPCORB
 from .SSSourceSchema import SSSource
 from .SSObjectSchema import SSObject
 from ..base.SSTableBase import NoIndexError
+from .SSObjectFlags import SSObjectFlags
 
 from ..customTypes import ColumnName
 
@@ -199,6 +200,12 @@ def calculate_arc(row: SSObjectRow) -> str:
         return '\\N'
     sort_dates = sorted(float(x) for x in midPointTai_list)
     return f"{sort_dates[-1] - sort_dates[0]}"
+
+flag_val = 0
+def ss_flags(fs):
+    global flag_val
+    flag_val = flag_val + SSObjectFlags[fs]
+
 
 moid_cache = dict()
 def lookup_moid_cache(oid,mpc):
@@ -438,20 +445,28 @@ def band_fitter(band:str,row:SSObjectRow) -> BandFitterReturn:
     mag_list = np.array([float(d['phaseAngle']) for d in row.dia_list if d['mag'] == band])
     if mag_list.size < 2:
         #print(mag_list.size)
+        ss_flags('TOO_FEW_NDATA_'+band)
         return BandFitterReturn(-999.0,-999.0,-999.0,-999.0,-999.0,-999.0,mag_list.size,True)
     a = np.array([float(d['filter']) for d in row.dia_list if d['mag'] == band]) * DEG2RAD #change
     weights = np.array([(1/(float(d['magSigma'])))**2 for d in row.dia_list if d['mag'] == band]) #change
-    obs = Obs.from_dict({'alpha':a,'mag':mag_list,'weights':weights})
-    var = HG12.from_obs(obs,fitter,'mag')
+    try:
+        obs = Obs.from_dict({'alpha':a,'mag':mag_list,'weights':weights})
+        var = HG12.from_obs(obs,fitter,'mag')
+    except:
+        ss_flags('FIT_FAIL_'+band)
+        return BandFitterReturn(-999.0,-999.0,-999.0,-999.0,-999.0,-999.0,mag_list.size,True)
     fi=fitter.fit_info
     #print(fi)
     param_cov = fi['param_cov']
     fvec = fi['fvec']
+    bool1=True
     if type(param_cov) == type(None):
         H_err = -999.0
         G12_err = -999.0
         H_G12_cov = -999.0
+        ss_flags('FIT_PARAM_FAIL_'+band)
         flag = True
+        bool1=False
     else:
         H_err = np.sqrt(param_cov[0][0])
         G12_err = np.sqrt(param_cov[1][1])
@@ -459,9 +474,18 @@ def band_fitter(band:str,row:SSObjectRow) -> BandFitterReturn:
     if type(fvec) == type(None):
         chi_2 = -999.0
         flag = True
+        if bool1:
+            ss_flags('FIT_PARAM_FAIL_'+band)
     else:
         chi_2 = np.sum(fvec**2 * weights)
     return BandFitterReturn(var.H.value,var.G12.value,H_err,G12_err,H_G12_cov,chi_2,mag_list.size,flag)
+
+@SSObject.register(ColumnName("flags"))
+def row_flags(row:SSObjectRow):
+    global flag_val
+    fv = flag_val
+    flag_val = 0
+    return f"{bin(fv)}"
 # ### SSSource ####
 @SSSource.register(ColumnName("eclipticLambda"))
 def make_ecliptic_lamba(row: Mapping):
