@@ -212,7 +212,11 @@ def lookup_moid_cache(oid,mpc):
     global moid_cache
     key = oid
     if key not in moid_cache:
-        results = moid_comp(mpc)
+        try:
+            results = moid_comp(mpc)
+        except:
+            ss_flags('MOID_FAIL')
+            results = MoidCompReturn(-999.0,-999.0,-999.0,-999.0)
         moid_cache = {}
         moid_cache[key] = results
     return moid_cache[key]
