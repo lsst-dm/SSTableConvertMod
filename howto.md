@@ -17,6 +17,8 @@ Make sure you have the following dependencies also installed,
 - click
 - cachetools
 - pyzmq
+- pymoid found at https://github.com/dirac-institute/pymoid
+- spice kernel files `de430.bsp` and `latest_leapseconds.tls`
 - *and many more ...*
 
 You'll also need:
