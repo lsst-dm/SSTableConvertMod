@@ -3,7 +3,7 @@ from __future__ import annotations
 __all__ = ()
 
 from sys import maxsize
-import astropy.units as u  # or use conversion factors to save compute time?
+import astropy.units as u
 from coord import CelestialCoord, degrees, _Angle, util
 from hashlib import sha1
 from typing import MutableMapping, Mapping, TYPE_CHECKING, Tuple
@@ -18,9 +18,12 @@ from astropy.modeling.fitting import LevMarLSQFitter
 fitter = LevMarLSQFitter()
 from ..pymoid.pymoid import moid
 import spiceypy as sp
-sp.furnsh('/epyc/projects/jpl_survey_sim/survey_sim/kernels/de430.bsp') # /epyc/projects/thor/thor/thor/data/de430.bsp
-sp.furnsh('/epyc/projects/jpl_survey_sim/survey_sim/kernels/latest_leapseconds.tls')
-#from astroquery.jplhorizons import Horizons
+try:
+    sp.furnsh('/epyc/projects/jpl_survey_sim/survey_sim/kernels/de430.bsp')
+    sp.furnsh('/epyc/projects/jpl_survey_sim/survey_sim/kernels/latest_leapseconds.tls')
+except:
+    print('spiceypy cannot read de430.bsp and/or latest_leapseconds.tls spice kernels!')
+    raise
 
 from .DiaSourceSchema import DIASource
 from .MPCORBSchema import MPCORB
@@ -230,8 +233,6 @@ class MoidCompReturn:
     DeltaV: float
 
 def moid_comp(mpc):
-    #earth = Horizons(id='399',location='500@10',epochs=float(mpc['epoch']),id_type='majorbody').elements()
-    #ea = [float(earth['a']),float(earth['e']),float(earth['incl']),float(earth['w']),float(earth['Omega'])]
     et = sp.unitim(float(mpc['epoch'])+2400000.5,"JDTDB",'ET')
     states=sp.spkez(399,et,"ECLIPJ2000",'NONE',10)
     pos = states[0][:3]*KM_TO_AU
@@ -252,6 +253,8 @@ def moid_comp(mpc):
     vtarget=(gk*KM_TO_AU**(-1))/spd
     u2=3.0-1.0/a-2.0*np.sqrt(a*(1.0-e*e))*math.cos(float(mpc['incl'])*DEG2RAD)
     u=np.where(u2>0,np.sqrt(u2),0)*vtarget
+    if u <= 0.0:
+        ss_flags('MOID_DELTAV_FAIL')
     return MoidCompReturn(MOID,v1,v2,u)
 
 @SSObject.register(ColumnName("MOID"))
@@ -266,21 +269,10 @@ def MOIDTrueAnomaly(row: SSObjectRow) -> str:
 def MOIDDeltaV(row: SSObjectRow) -> str:
     return f"{lookup_moid_cache(row.ssobjectid,row.mpc_entry).DeltaV}"
 
-# Questions,
-# 1) How do you determine which band is being fit? SOLVED
-# 2) How do you obtain a list of phase angles for one object? SOLVED
-# 3) How do you return fit_info dictionary? SOLVED SORTA
-# 4) Where do weights come in? 1/mag_sigma^2 SOLVED
-# 5) How do you find the Ndata column? SOLVED KINDA
-band_cache = dict() # needs a limit on size
+band_cache = dict()
 def lookup_band_cache(band,row):
-    #if row.ssobjectid == '1108132049631328328':
-    #    print('Found!')
-    #    print(row.dia_list)
-    #print(row.mpc_entry)
-    global band_cache #hopefully this works
+    global band_cache
     key = (row.ssobjectid,band)
-    #results = band_cache.get(key)
     if key not in band_cache:
         results = band_fitter(band,row)
         band_cache = {}
@@ -435,32 +427,21 @@ class BandFitterReturn:
     H_G12_cov: float
     chi_2: float
     N: float
-    flag: bool
-#@lru_cache(maxsize=1000)
-#@cached(cache={}, key=lambda band, row, oid: hashkey(oid))
+
 def band_fitter(band:str,row:SSObjectRow) -> BandFitterReturn:
-    #print(row.dia_list)
-    #mag_list = np.array([d['mag'] for d in row.dia_list if d['filter'] == band]) #change
-    # FOR TESTING PURPOSES ONLY KEY
-    # 'mag' -> 'filter'
-    # 'filter' -> 'phaseAngle'
-    # 'phaseAngle' -> 'mag'
-    flag = False
-    mag_list = np.array([float(d['phaseAngle']) for d in row.dia_list if d['mag'] == band])
+    mag_list = np.array([float(d['mag']) for d in row.dia_list if d['filter'] == band])
     if mag_list.size < 2:
-        #print(mag_list.size)
         ss_flags('TOO_FEW_NDATA_'+band)
-        return BandFitterReturn(-999.0,-999.0,-999.0,-999.0,-999.0,-999.0,mag_list.size,True)
-    a = np.array([float(d['filter']) for d in row.dia_list if d['mag'] == band]) * DEG2RAD #change
-    weights = np.array([(1/(float(d['magSigma'])))**2 for d in row.dia_list if d['mag'] == band]) #change
+        return BandFitterReturn(-999.0,-999.0,-999.0,-999.0,-999.0,-999.0,mag_list.size)
+    a = np.array([float(d['phaseAngle']) for d in row.dia_list if d['filter'] == band]) * DEG2RAD
+    weights = np.array([(1/(float(d['magSigma'])))**2 for d in row.dia_list if d['filter'] == band])
     try:
         obs = Obs.from_dict({'alpha':a,'mag':mag_list,'weights':weights})
         var = HG12.from_obs(obs,fitter,'mag')
     except:
         ss_flags('FIT_FAIL_'+band)
-        return BandFitterReturn(-999.0,-999.0,-999.0,-999.0,-999.0,-999.0,mag_list.size,True)
+        return BandFitterReturn(-999.0,-999.0,-999.0,-999.0,-999.0,-999.0,mag_list.size)
     fi=fitter.fit_info
-    #print(fi)
     param_cov = fi['param_cov']
     fvec = fi['fvec']
     bool1=True
@@ -469,7 +450,6 @@ def band_fitter(band:str,row:SSObjectRow) -> BandFitterReturn:
         G12_err = -999.0
         H_G12_cov = -999.0
         ss_flags('FIT_PARAM_FAIL_'+band)
-        flag = True
         bool1=False
     else:
         H_err = np.sqrt(param_cov[0][0])
@@ -477,19 +457,18 @@ def band_fitter(band:str,row:SSObjectRow) -> BandFitterReturn:
         H_G12_cov = param_cov[0][1]
     if type(fvec) == type(None):
         chi_2 = -999.0
-        flag = True
         if bool1:
             ss_flags('FIT_PARAM_FAIL_'+band)
     else:
         chi_2 = np.sum(fvec**2 * weights)
-    return BandFitterReturn(var.H.value,var.G12.value,H_err,G12_err,H_G12_cov,chi_2,mag_list.size,flag)
+    return BandFitterReturn(var.H.value,var.G12.value,H_err,G12_err,H_G12_cov,chi_2,mag_list.size)
 
 @SSObject.register(ColumnName("flags"))
 def row_flags(row:SSObjectRow):
     global flag_val
     fv = flag_val
     flag_val = 0
-    return f"{bin(fv)}"
+    return f"{fv}"
 # ### SSSource ####
 @SSSource.register(ColumnName("eclipticLambda"))
 def make_ecliptic_lamba(row: Mapping):
